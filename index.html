@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>مرغ دونی | نسخه کامل با مودال</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(145deg, #0d4a1d, #1a6d2b); min-height: 100vh; padding: 15px; }
+        .main-container { max-width: 1400px; margin: 0 auto; display: flex; gap: 20px; flex-wrap: wrap; }
+        .game-area { flex: 3; min-width: 280px; background: #fef7e6; border-radius: 50px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .chat-area { flex: 1.2; min-width: 280px; background: #fcf0dd; border-radius: 50px; padding: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; }
+        h1 { text-align: center; color: #d47a2a; font-size: 1.8rem; text-shadow: 2px 2px 0 #ffe0a3; margin-bottom: 10px; }
+        .welcome-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); display: flex; justify-content: center; align-items: center; z-index: 3000; animation: fadeOutWelcome 3.5s forwards; pointer-events: none; }
+        .welcome-card { background: linear-gradient(145deg, #ffefc0, #fde5b0); padding: 40px 60px; border-radius: 90px; text-align: center; animation: bounceWelcome 0.9s ease-out; border: 4px solid #d47a2a; box-shadow: 0 0 60px rgba(212,122,42,0.5); }
+        .welcome-card h1 { font-size: 2.8rem; color: #d47a2a; }
+        .welcome-card p { font-size: 1.3rem; color: #7b3f00; margin-top: 10px; }
+        @keyframes bounceWelcome { 0% { transform: scale(0.2) rotate(-10deg); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes fadeOutWelcome { 0% { opacity: 1; visibility: visible; } 85% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+        .join-panel { text-align: center; background: #fffae8; border-radius: 40px; padding: 25px; margin-bottom: 20px; }
+        .join-panel input { padding: 12px 20px; border-radius: 40px; border: 2px solid #f7b05e; font-size: 1rem; margin: 5px; width: 200px; background: white; }
+        .join-panel button { padding: 12px 25px; border-radius: 40px; border: none; font-size: 1rem; font-weight: bold; margin: 5px; cursor: pointer; background: #27ae60; color: white; box-shadow: 0 4px 0 #1a6b3b; transition: 0.05s linear; }
+        .join-panel button:active { transform: translateY(3px); box-shadow: 0 1px 0 #1a6b3b; }
+        .room-code { text-align: center; background: #ffecb3; padding: 8px; border-radius: 40px; margin-bottom: 10px; font-weight: bold; font-size: 0.95rem; }
+        .turn-box { text-align: center; background: linear-gradient(145deg, #d48a3a, #b8732a); color: white; padding: 12px; border-radius: 60px; margin-bottom: 15px; font-weight: bold; font-size: 1.1rem; box-shadow: inset 0 -3px 0 #8a5a1a; }
+        .status-bar { background: #2d2b1a; color: #ffefb0; padding: 8px 15px; border-radius: 30px; margin-bottom: 15px; text-align: center; font-size: 0.85rem; border: 1px solid #5a4a2a; }
+        .status-bar span { color: #ffd966; font-weight: bold; }
+        .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .player { background: #fff7e5; border-radius: 35px; padding: 15px; border: 3px solid #f7b05e; transition: 0.1s; }
+        .current { border: 4px solid #2ecc71; background: #f8fff0; box-shadow: 0 0 0 4px #f1c40f; }
+        .player-name { font-size: 1rem; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 8px; color: #7b3f00; }
+        .stats { display: flex; gap: 15px; margin-bottom: 8px; font-size: 0.85rem; }
+        .eggs { color: #e67e22; font-weight: bold; }
+        .chicks { color: #2ecc71; font-weight: bold; }
+        .hand { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; min-height: 75px; }
+        .card { background: linear-gradient(145deg, #f3b33d, #e67e22); width: 55px; height: 75px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 5px 0 #a45d1a; text-align: center; cursor: pointer; transition: 0.05s linear; font-size: 0.65rem; color: #2c1a0a; }
+        .card span { font-size: 1.8rem; }
+        .card-back { background: linear-gradient(145deg, #2c5a2e, #1a3a1a); box-shadow: 0 4px 0 #0f2a0f; color: transparent; }
+        .card-back::after { content: "🐔"; color: #ffd966; font-size: 2rem; display: flex; align-items: center; justify-content: center; height: 100%; }
+        .card.selected { background: #2ecc71; color: white; box-shadow: 0 0 0 3px white, 0 5px 0 #1b8a4a; transform: scale(0.97); }
+        .actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 15px 0; }
+        .action-btn { background: #ffa047; border: none; padding: 8px 14px; border-radius: 40px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #b4621a; transition: 0.05s linear; font-size: 0.75rem; color: #2c1a0a; }
+        .action-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b4621a; }
+        .action-btn.discard { background: #e67e22; box-shadow: 0 4px 0 #a0551a; }
+        .reset-btn { background: #c0392b; color: white; width: 100%; padding: 10px; margin-top: 10px; box-shadow: 0 4px 0 #8a2a1f; }
+        .reset-btn:active { box-shadow: 0 1px 0 #8a2a1f; }
+        .game-log { background: #2d2b1a; color: #ffefb0; padding: 10px; border-radius: 25px; height: 110px; overflow-y: auto; font-size: 0.75rem; margin-top: 15px; border: 1px solid #5a4a2a; }
+        .defense-btn { background: #f1c40f; border: none; padding: 6px; border-radius: 40px; margin-top: 8px; width: 100%; cursor: pointer; font-weight: bold; font-size: 0.7rem; box-shadow: 0 3px 0 #b7950b; transition: 0.05s linear; }
+        .defense-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #b7950b; }
+        .chat-messages { background: #fff2df; border-radius: 30px; height: 280px; overflow-y: auto; padding: 15px; font-size: 0.85rem; border: 2px solid #e6cba0; }
+        .chat-message { background: #fff0d0; padding: 10px 14px; border-radius: 20px; margin-bottom: 8px; border-right: 4px solid #d47a2a; }
+        .chat-sender { font-weight: bold; color: #d47a2a; font-size: 0.8rem; }
+        .chat-time { font-size: 0.65rem; color: #999; margin-right: 6px; }
+        .chat-input-area { display: flex; gap: 10px; margin-top: 5px; }
+        .chat-input { flex: 1; padding: 12px; border-radius: 40px; border: 2px solid #e6cba0; background: white; font-size: 1rem; }
+        .send-btn { background: #f5a623; border: none; padding: 0 25px; border-radius: 40px; font-weight: bold; cursor: pointer; font-size: 1rem; box-shadow: 0 4px 0 #b87a1a; transition: 0.05s; }
+        .send-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b87a1a; }
+        .gif-strip { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+        .gif-btn { background: #ff914d; border: none; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; cursor: pointer; font-weight: bold; box-shadow: 0 3px 0 #b86a1a; transition: 0.05s; }
+        .gif-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #b86a1a; }
+        .big-screen-message { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.88); color: #ffd966; font-size: 2.8rem; font-weight: bold; padding: 30px 50px; border-radius: 70px; text-align: center; z-index: 2500; animation: messagePop 1.2s forwards; backdrop-filter: blur(12px); border: 3px solid #ffd966; box-shadow: 0 0 60px rgba(255,215,0,0.3); min-width: 200px; }
+        @keyframes messagePop { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.2) rotate(-15deg); } 30% { transform: translate(-50%,-50%) scale(1.2) rotate(3deg); } 60% { transform: translate(-50%,-50%) scale(0.95) rotate(-2deg); } 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; transform: translate(-50%,-50%) scale(0.9); } }
+        .center-gif { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); color: #ffd966; font-size: 2.2rem; font-weight: bold; padding: 25px 45px; border-radius: 60px; text-align: center; z-index: 2000; animation: fadeOutGif 2.5s forwards; backdrop-filter: blur(10px); border: 2px solid #ffd966; }
+        @keyframes fadeOutGif { 0% { opacity: 1; transform: translate(-50%,-50%) scale(0.7); } 20% { transform: translate(-50%,-50%) scale(1.1); } 80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; transform: translate(-50%,-50%) scale(0.9); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; z-index: 4000; animation: modalFadeIn 0.3s ease-out; }
+        @keyframes modalFadeIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+        .modal-box { background: linear-gradient(145deg, #fef7e6, #fcf0dd); padding: 30px 40px; border-radius: 60px; max-width: 450px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 3px solid #d47a2a; animation: modalBounce 0.5s ease-out; max-height: 80vh; overflow-y: auto; }
+        @keyframes modalBounce { 0% { transform: scale(0.5) rotate(-5deg); opacity: 0; } 60% { transform: scale(1.05) rotate(1deg); } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        .modal-box h3 { color: #d47a2a; font-size: 1.5rem; margin-bottom: 20px; }
+        .modal-btn { background: #ffa047; border: none; padding: 10px 20px; border-radius: 40px; margin: 6px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 3px 0 #b4621a; transition: 0.05s; }
+        .modal-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #b4621a; }
+        .modal-btn.green { background: #27ae60; color: white; box-shadow: 0 3px 0 #1a6b3b; }
+        .modal-btn.red { background: #c0392b; color: white; box-shadow: 0 3px 0 #8a2a1f; }
+        .modal-btn.purple { background: #8e44ad; color: white; box-shadow: 0 3px 0 #6c3483; }
+        .modal-close { background: #7f8c8d; color: white; box-shadow: 0 3px 0 #5d6d7e; }
+        .modal-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 15px 0; }
+        .modal-grid .modal-btn { flex: 1 0 auto; min-width: 80px; }
+        .modal-subtitle { color: #7b3f00; font-size: 0.9rem; margin-bottom: 10px; }
+        .avatar-emoji { font-size: 1.4rem; vertical-align: middle; }
+        .avatar-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; border: 2px solid #f7b05e; }
+        .avatar-img.big { width: 90px; height: 90px; border-width: 3px; }
+        .player-clickable { cursor: pointer; }
+        .profile-widget { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff2df; border-radius: 40px; padding: 8px 15px; margin-bottom: 10px; }
+        .profile-widget .name { font-weight: bold; color: #7b3f00; }
+        .avatar-picker { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
+        .avatar-option { font-size: 1.8rem; background: #fff2df; border: 3px solid transparent; border-radius: 50%; width: 55px; height: 55px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .avatar-option.selected { border-color: #27ae60; background: #e8f8f0; }
+        .profile-input { padding: 10px 18px; border-radius: 40px; border: 2px solid #f7b05e; font-size: 1rem; width: 85%; margin-bottom: 10px; background: white; }
+        .upload-avatar-label { display: inline-block; background: #2980b9; color: white; padding: 8px 16px; border-radius: 40px; cursor: pointer; font-size: 0.85rem; font-weight: bold; margin: 6px; }
+        .profile-stats-row { display: flex; gap: 15px; justify-content: center; margin: 10px 0; font-size: 0.9rem; color: #7b3f00; }
+        .media-bar { display: flex; gap: 8px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+        .media-btn { background: #7f8c8d; color: white; border: none; padding: 10px 16px; border-radius: 40px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #5d6d7e; font-size: 0.85rem; }
+        .media-btn.on { background: #27ae60; box-shadow: 0 4px 0 #1a6b3b; }
+        .media-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #5d6d7e; }
+        @media (max-width: 700px) { .card { width: 48px; height: 65px; } .card span { font-size: 1.4rem; } .action-btn { padding: 6px 12px; font-size: 0.7rem; } .big-screen-message { font-size: 1.8rem; padding: 20px 30px; white-space: normal; width: 85%; } .center-gif { font-size: 1.4rem; padding: 15px 25px; white-space: normal; width: 85%; } .modal-box { padding: 20px; } .modal-box h3 { font-size: 1.2rem; } }
+    </style>
+<style id="morgdoni-graphical-theme">
+/* MORG DONI GRAPHICAL THEME */
+:root{--mg-gold:#ffd166;--mg-orange:#ff8c42;--mg-purple:#32164d}
+body{background:radial-gradient(circle at 15% 10%,rgba(255,209,102,.18),transparent 25%),radial-gradient(circle at 85% 20%,rgba(239,93,168,.16),transparent 28%),linear-gradient(135deg,#1b1230,#32164d)!important;background-attachment:fixed!important}
+button,.action-btn,.modal-btn{border-radius:15px!important;font-weight:900!important;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease!important;box-shadow:0 7px 0 rgba(0,0,0,.2),0 12px 24px rgba(0,0,0,.16)!important}
+button:hover,.action-btn:hover,.modal-btn:hover{transform:translateY(-2px) scale(1.015)!important;filter:brightness(1.08)!important}
+.card{background:linear-gradient(145deg,#fffdf5,#ffe9bc)!important;border:3px solid rgba(255,140,66,.55)!important;border-radius:18px!important;box-shadow:0 10px 0 rgba(0,0,0,.12),0 16px 28px rgba(0,0,0,.16)!important;transition:transform .18s ease,box-shadow .18s ease!important}
+.card:hover{transform:translateY(-8px) rotate(0deg) scale(1.04)!important;box-shadow:0 17px 0 rgba(0,0,0,.1),0 22px 35px rgba(0,0,0,.22)!important}
+.card.selected{outline:4px solid var(--mg-gold)!important;transform:translateY(-10px) scale(1.05)!important}
+.card-back{background:repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0 5px,transparent 5px 10px),linear-gradient(145deg,#6b2fa4,#30124f)!important;border-color:#ffd166!important}
+.modal-overlay{backdrop-filter:blur(7px)!important;background:rgba(10,4,20,.68)!important}
+.modal-box{border:2px solid rgba(255,209,102,.65)!important;border-radius:24px!important;background:linear-gradient(145deg,#fffaf0,#ffeac5)!important;box-shadow:0 25px 70px rgba(0,0,0,.45)!important;animation:mgPop .22s ease-out}
+@keyframes mgPop{from{opacity:0;transform:translateY(15px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+input,select{border-radius:13px!important;border:2px solid rgba(255,140,66,.3)!important}
+</style><style id='morgdoni-ultra-graphics'>
+/* ===== MORG DONI ULTRA GRAPHICS ===== */
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap');
+
+:root{
+ --g1:#160b2e;--g2:#35104f;--gold:#ffd45a;--gold2:#ff9f43;
+ --pink:#ff4f9a;--cyan:#48d8ff;--green:#4be477;--paper:#fff8e9;--ink:#25142f;
+}
+*{box-sizing:border-box}
+body{
+ font-family:'Vazirmatn','Tahoma',sans-serif!important;
+ min-height:100vh!important;
+ color:#fff!important;
+ background:
+ radial-gradient(circle at 8% 12%,rgba(255,212,90,.18),transparent 22%),
+ radial-gradient(circle at 90% 18%,rgba(72,216,255,.13),transparent 24%),
+ radial-gradient(circle at 50% 100%,rgba(255,79,154,.12),transparent 30%),
+ linear-gradient(135deg,var(--g1),var(--g2))!important;
+ overflow-x:hidden;
+}
+body:after{
+ content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.14;
+ background-image:radial-gradient(rgba(255,255,255,.5) 1px,transparent 1px);
+ background-size:26px 26px;
+}
+h1,h2,h3,.title,.logo{font-family:'Baloo 2','Vazirmatn',sans-serif!important;font-weight:800!important}
+button,.action-btn,.modal-btn{
+ font-family:'Vazirmatn',sans-serif!important;font-weight:800!important;
+ border:0!important;border-radius:16px!important;
+ box-shadow:0 6px 0 rgba(0,0,0,.25),0 12px 30px rgba(0,0,0,.22)!important;
+ transition:.18s cubic-bezier(.2,.8,.2,1)!important;
+}
+button:hover,.action-btn:hover,.modal-btn:hover{transform:translateY(-4px) scale(1.025)!important;filter:saturate(1.12) brightness(1.07)!important}
+button:active,.action-btn:active,.modal-btn:active{transform:translateY(3px) scale(.98)!important}
+input,select,textarea{
+ font-family:'Vazirmatn',sans-serif!important;border-radius:14px!important;
+ background:rgba(255,255,255,.95)!important;color:var(--ink)!important;
+ border:2px solid rgba(255,212,90,.5)!important;
+ box-shadow:inset 0 2px 7px rgba(0,0,0,.08)!important;
+}
+.panel,.game-panel,.lobby-panel,#lobbyPanel,#gamePanel,#joinPanel{
+ background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.06))!important;
+ border:1px solid rgba(255,255,255,.18)!important;
+ backdrop-filter:blur(18px)!important;
+ box-shadow:0 25px 80px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.12)!important;
+ border-radius:28px!important;
+}
+.card{
+ position:relative!important;
+ background:linear-gradient(145deg,#fffef8 0%,#ffe6aa 72%,#ffc95e 100%)!important;
+ color:var(--ink)!important;
+ border:3px solid rgba(255,255,255,.75)!important;
+ border-radius:20px!important;
+ box-shadow:0 10px 0 rgba(100,55,0,.16),0 20px 35px rgba(0,0,0,.25),inset 0 1px 0 #fff!important;
+ overflow:hidden!important;
+}
+.card:before{
+ content:"";position:absolute;inset:5px;border-radius:14px;
+ border:1px solid rgba(255,159,67,.35);pointer-events:none;
+}
+.card:hover{transform:translateY(-12px) rotate(0) scale(1.06)!important;z-index:20!important}
+.card.selected{
+ outline:4px solid var(--gold)!important;
+ box-shadow:0 0 0 8px rgba(255,212,90,.18),0 22px 40px rgba(0,0,0,.3)!important;
+}
+.card-back{
+ background:
+ radial-gradient(circle at 50% 50%,rgba(255,212,90,.2),transparent 28%),
+ repeating-linear-gradient(45deg,rgba(255,255,255,.07) 0 6px,transparent 6px 12px),
+ linear-gradient(145deg,#5a278a,#24103e)!important;
+ border-color:#ffd45a!important;
+}
+.modal-overlay{backdrop-filter:blur(12px)!important;background:rgba(7,3,15,.74)!important}
+.modal-box{
+ font-family:'Vazirmatn',sans-serif!important;
+ border-radius:28px!important;
+ background:linear-gradient(145deg,#fffdf7,#ffe8b8)!important;
+ color:var(--ink)!important;
+ border:2px solid rgba(255,212,90,.8)!important;
+ box-shadow:0 30px 90px rgba(0,0,0,.5)!important;
+ animation:ultraIn .25s cubic-bezier(.2,.9,.2,1)!important;
+}
+@keyframes ultraIn{from{opacity:0;transform:translateY(25px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes glow{50%{box-shadow:0 0 0 10px rgba(255,212,90,0),0 0 35px rgba(255,212,90,.45)}}
+.logo,.title{filter:drop-shadow(0 5px 0 rgba(0,0,0,.25));text-shadow:0 3px 15px rgba(255,212,90,.22)}
+</style><style id="morgdoni-board-ui">
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&family=Baloo+2:wght@600;700;800&display=swap');
+:root{--wood:#5b2d16;--wood2:#9b572a;--gold:#ffd35c;--cream:#fff7df;--green:#35c76b;--purple:#8c43bd;--ink:#2a1731}
+body{font-family:'Vazirmatn',Tahoma,sans-serif!important;background:radial-gradient(circle at 20% 10%,rgba(255,213,92,.18),transparent 24%),linear-gradient(135deg,#0d2917,#164f27 50%,#0b3218)!important;padding:18px!important}
+.ultra-app{max-width:1500px!important;gap:18px!important;align-items:stretch}
+.ultra-shell{background:linear-gradient(145deg,rgba(255,248,225,.98),rgba(255,232,184,.98))!important;border-radius:32px!important;padding:16px!important;min-height:850px;box-shadow:0 30px 70px rgba(0,0,0,.38)!important}
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin-bottom:12px}.brand-plaque{justify-self:center;background:linear-gradient(180deg,#a65c2d,#633015);color:#ffd45a;padding:8px 34px;border-radius:20px;border:2px solid #e8ad52;box-shadow:0 8px 0 #3a1c0d,0 12px 25px rgba(0,0,0,.25);font-family:'Baloo 2',sans-serif;font-size:28px;display:flex;gap:10px;align-items:center}.brand-plaque small{display:block;font:600 11px Vazirmatn;color:#ffe7a2}.top-actions{display:flex;gap:7px}.round-btn{width:44px;height:44px;border-radius:50%!important;background:#2a2330!important;color:#fff;font-size:19px;padding:0!important}.connection-pill{justify-self:end;background:#27222a;color:#fff;padding:11px 15px;border-radius:15px;border:1px solid #51475a}.connection-pill b{color:#42df74}
+.hero-panel{max-width:600px;margin:45px auto!important;text-align:center;border-radius:30px!important;padding:35px!important}.hero-chicken{font-size:68px;filter:drop-shadow(0 8px 4px rgba(0,0,0,.2));animation:bob 2s infinite}@keyframes bob{50%{transform:translateY(-8px) rotate(-3deg)}}.hero-panel h2{font:900 31px 'Baloo 2';color:#b35e1f;margin:8px}.hero-panel input{width:min(80%,360px);display:block;margin:10px auto;padding:13px 16px!important}.join-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.primary-btn,.secondary-btn,.lobby-btn{padding:13px 25px!important;color:#fff!important}.primary-btn{background:#27b95c!important}.secondary-btn{background:#e78a20!important}.lobby-btn{margin-top:14px;background:#327fbd!important}.room-status{min-height:22px;color:#7b3f00}.profile-widget{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:10px}.mini-btn{padding:7px 12px!important;background:#7e43ad!important;color:#fff}
+.lobby-screen{padding:15px}.lobby-head{display:flex;justify-content:space-between;align-items:center;background:#2a2220;color:#fff;border-radius:18px;padding:12px 16px;margin-bottom:12px}.lobby-head b{font-size:20px}.lobby-head small{display:block;color:#ddd}.quick-btn{background:#8d45ba!important;color:#fff;padding:12px 20px!important}.back-btn{background:#777!important;color:#fff;padding:10px 20px!important}.lobby-players{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.lobby-players .player{background:#fff;border:2px solid #efa947!important;border-radius:20px!important;padding:14px!important;color:#633b1b!important}
+.board-panel{padding:10px!important}.board-head{display:grid;grid-template-columns:1fr 2fr 1fr;gap:10px;align-items:center}.room-chip{background:#34251b;color:#fff;border-radius:13px;padding:9px 12px;text-align:center}.turn-box{background:linear-gradient(180deg,#9d5729,#633015)!important;color:#ffe39a!important;border:2px solid #d79b4d!important;border-radius:16px!important;padding:11px!important;font:800 20px 'Baloo 2'!important;box-shadow:0 6px 0 #3d1d0d!important}.glossy-status{margin:8px 0!important;border-radius:12px!important}.game-board{position:relative;min-height:485px;border-radius:28px;padding:18px;background:radial-gradient(circle at 50% 50%,#a86231,#7b3f1d 65%,#4d2613);box-shadow:inset 0 0 0 3px #d28a43,inset 0 0 70px rgba(0,0,0,.4),0 18px 30px rgba(0,0,0,.25);overflow:hidden}.game-board:before{content:"";position:absolute;inset:0;opacity:.18;background:repeating-linear-gradient(0deg,transparent 0 28px,rgba(255,220,170,.25) 29px 30px);pointer-events:none}.players{position:relative;z-index:2}.game-board #playersArea{display:grid;grid-template-columns:1fr;gap:6px}.game-board #playersArea .player{background:transparent!important;border:0!important;box-shadow:none!important;color:#fff!important}.game-board #playersArea .player-name{background:rgba(44,20,10,.72);border:1px solid #dca14e;border-radius:14px;padding:7px 12px;display:flex;justify-content:space-between}.game-board #playersArea .stats{color:#fff}.game-board #playersArea .hand{display:flex;justify-content:center;gap:8px;min-height:90px;padding:5px}.game-board #playersArea .player:last-child{margin-top:145px}.game-board #playersArea .player:last-child .hand{min-height:150px}.board-center-deck{position:absolute;z-index:1;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;gap:18px;align-items:center}.deck-stack{position:relative;width:115px;height:150px}.deck-card{position:absolute;width:100px;height:135px;border-radius:16px;background:#25a6d7;border:5px solid #fff;box-shadow:0 10px 18px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:50px;transform:rotate(-4deg)}.deck-card.back{transform:translate(14px,-8px) rotate(5deg);background:repeating-linear-gradient(45deg,#3d2d8f 0 8px,#2b1f6b 8px 16px)}.egg-counter{background:#382215dd;color:#fff;border:2px solid #e5ad4e;border-radius:15px;padding:12px 18px;text-align:center}.egg-counter span{font-size:25px}.egg-counter b{font-size:24px;display:block}.egg-counter small{font-size:11px;color:#ffd77b}.board-hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);color:#ffe6ad;background:#3a1f10cc;padding:7px 18px;border-radius:20px;font-size:12px}.card{font-size:0!important;width:105px!important;height:145px!important;border-radius:16px!important;padding:0!important;overflow:hidden!important}.card .card-art{width:100%;height:100%;object-fit:cover;display:block}.card span{display:block!important;height:100%}.card br,.card span+br,.card span+br+*{display:none}.card-back{background:repeating-linear-gradient(45deg,#46308c 0 7px,#2f2169 7px 14px)!important}.card-back:after{content:'🐔';font-size:42px;display:grid;place-items:center;height:100%;color:#ffd35c}
+.action-dock{display:grid;grid-template-columns:repeat(9,1fr);gap:7px;margin-top:10px}.game-btn{padding:10px 5px!important;color:#fff!important;font-size:12px!important}.egg{background:#e6a51c!important}.chick{background:#35a95b!important}.fox{background:#e27628!important}.snake{background:#6f48b4!important}.trap{background:#c8453e!important}.draw{background:#2587bd!important}.cancel{background:#555!important}.end{background:#20a84f!important}.sticker{background:#a33bc1!important}.start-btn,.leave-btn{padding:11px 25px!important;color:#fff!important;margin:10px}.start-btn{background:#27b95c!important}.leave-btn{background:#c23f3f!important}
+.voice-dock{display:flex!important;justify-content:center;align-items:center;gap:10px;background:#30251d;border-radius:15px!important;color:#fff!important;padding:8px!important;margin-top:8px}.voice-main{background:#2fba68!important;color:#fff!important;padding:9px 18px!important}.ultra-chat{background:linear-gradient(145deg,#fff8e7,#ffe8bc)!important;border-radius:30px!important;padding:15px!important;min-width:310px;max-width:390px;box-shadow:0 30px 70px rgba(0,0,0,.35)!important}.chat-head{display:flex;justify-content:space-between;align-items:center;background:#34231b;color:#fff;padding:12px;border-radius:17px}.chat-head b{display:block}.chat-head small{display:block;color:#e8d5b0;font-size:10px}.chat-avatar{font-size:26px;margin-left:7px}.online-dot{color:#53dc75;font-size:11px}.chat-messages{height:390px!important;background:#fff8ec!important;border-radius:18px!important;border:2px solid #e2bd83!important}.chat-message{border-radius:15px!important;background:#fff!important;border-right:4px solid #d77c2b!important;color:#3b281d}.system-msg{background:#fff1d0!important}.sticker-title{font-weight:900;color:#6d3b19;text-align:center}.sticker-grid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6px!important}.gif-btn{padding:9px 5px!important;background:#ff9852!important;color:#fff}.gif-display{background:#ffe0a2!important;color:#6c3918!important;border:2px dashed #d98b38!important;border-radius:15px!important;padding:10px!important}.chat-input-area{display:flex;gap:7px}.chat-input{padding:11px!important}.send-btn{background:#ef8b25!important;color:#fff!important;width:45px}.chat-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.chat-tools button{padding:8px!important;background:#7f4aa4!important;color:#fff!important}
+@media(max-width:1000px){.ultra-app{flex-direction:column}.ultra-chat{max-width:none}.action-dock{grid-template-columns:repeat(3,1fr)}.topbar{grid-template-columns:1fr auto}.connection-pill{grid-column:1/-1;justify-self:center}.board-center-deck{top:40%}}
+@media(max-width:650px){.brand-plaque{font-size:21px;padding:7px 14px}.game-board{min-height:430px}.card{width:70px!important;height:98px!important}.game-board #playersArea .player:last-child{margin-top:100px}.action-dock{grid-template-columns:repeat(2,1fr)}.ultra-chat{min-width:0}.chat-messages{height:260px!important}}
+</style><style id='morgdoni-ultimate-css'>
+/* ===== مرغ دونی ULTIMATE EDITION ===== */
+@font-face{font-family:'B Nazanin Local';src:local('B Nazanin'),local('BNazanin'),local('B Nazanin Regular');}
+:root{
+ --coffee:#7a563d;--coffee2:#5d402f;--cream:#f6ead8;--cream2:#ead8bf;
+ --paper:#fffaf2;--ink:#39291f;--gold:#c99a52;--shadow:rgba(55,35,20,.24);
+}
+*{font-family:'B Nazanin Local','B Nazanin','Tahoma',sans-serif!important}
+body{
+ background:
+ radial-gradient(circle at 20% 0%,rgba(255,255,255,.28),transparent 24%),
+ radial-gradient(circle at 90% 15%,rgba(201,154,82,.16),transparent 26%),
+ linear-gradient(145deg,#4a3328,#8a674c 52%,#3f2b22)!important;
+ color:var(--ink)!important;
+}
+.main-container{max-width:1500px!important;gap:18px!important}
+.game-area,.chat-area{
+ background:linear-gradient(145deg,rgba(255,250,242,.98),rgba(239,222,197,.96))!important;
+ border:2px solid rgba(122,86,61,.32)!important;
+ border-radius:30px!important;
+ box-shadow:0 20px 55px var(--shadow),inset 0 1px rgba(255,255,255,.8)!important;
+}
+.game-area h1{
+ color:var(--coffee2)!important;font-size:2.4rem!important;
+ text-shadow:0 2px 0 #fff,0 5px 16px rgba(70,40,20,.2)!important;
+ letter-spacing:.5px;
+}
+button,.action-btn,.modal-btn,.send-btn,.gif-btn{
+ background:linear-gradient(145deg,#ead7be,#d8b995)!important;
+ color:#39291f!important;
+ border:2px solid rgba(93,64,47,.35)!important;
+ border-radius:999px!important;
+ box-shadow:0 5px 0 #9a7657,0 10px 22px rgba(65,40,20,.15),inset 0 1px #fff!important;
+ font-size:1.02rem!important;
+}
+button:hover,.action-btn:hover,.modal-btn:hover,.send-btn:hover,.gif-btn:hover{
+ filter:brightness(1.06)!important;transform:translateY(-3px)!important;
+}
+button:active,.action-btn:active,.modal-btn:active{transform:translateY(3px)!important;box-shadow:0 2px 0 #9a7657!important}
+input,.chat-input{
+ background:#fffaf2!important;color:#39291f!important;border:2px solid #b99876!important;
+ border-radius:999px!important;padding:11px 16px!important;
+}
+.lobby-panel,.join-panel{
+ background:rgba(255,250,242,.78)!important;border:1px solid rgba(122,86,61,.25)!important;
+ border-radius:26px!important;
+}
+.chat-area{min-width:310px!important}
+.chat-messages{
+ background:linear-gradient(180deg,#fffaf2,#efe0ca)!important;
+ border:2px solid #c9aa89!important;border-radius:22px!important;
+ padding:12px!important;min-height:300px!important;
+ box-shadow:inset 0 2px 10px rgba(80,50,30,.08)!important;
+}
+.chat-message{
+ background:#fffdf8!important;border:1px solid #dbc4a8!important;
+ border-radius:18px!important;padding:9px 12px!important;
+ box-shadow:0 4px 10px rgba(70,45,25,.08)!important;margin:7px 0!important;
+}
+.card{
+ background:linear-gradient(145deg,#fffdf8,#f2ddbd)!important;
+ color:#39291f!important;border:3px solid #c9a36d!important;
+ border-radius:19px!important;
+ box-shadow:0 8px 0 #b48b62,0 18px 28px rgba(60,40,25,.22),inset 0 1px #fff!important;
+ overflow:hidden!important;
+}
+.card:before{content:"";position:absolute;inset:5px;border:1px solid rgba(122,86,61,.22);border-radius:14px;pointer-events:none}
+.card:hover{transform:translateY(-10px) scale(1.04)!important;z-index:30!important}
+.card.selected{outline:4px solid #c99a52!important;box-shadow:0 0 0 8px rgba(201,154,82,.17),0 20px 35px rgba(60,40,25,.25)!important}
+.card-back{background:repeating-linear-gradient(45deg,#6d4b38 0 7px,#5b3c2d 7px 14px)!important;border-color:#c99a52!important}
+.modal-overlay{background:rgba(34,22,15,.72)!important;backdrop-filter:blur(8px)!important}
+.modal-box{background:linear-gradient(145deg,#fffaf2,#ead7be)!important;color:#39291f!important;border:2px solid #b28c69!important;border-radius:26px!important}
+.status-bar,.room-code,.turn-box{border-radius:18px!important;background:rgba(122,86,61,.09)!important}
+.actions{gap:9px!important}
+
+/* Ultra intro */
+#welcomeAnim{background:radial-gradient(circle,#8d6548 0,#38261d 70%)!important;z-index:99999!important}
+#welcomeAnim .welcome-card{
+ background:linear-gradient(145deg,#fff8e9,#dfc29f)!important;
+ border:4px solid #a77b56!important;border-radius:42px!important;
+ box-shadow:0 22px 0 #684734,0 35px 90px rgba(0,0,0,.48),0 0 60px rgba(201,154,82,.35)!important;
+ animation:landing5 5s cubic-bezier(.16,.86,.25,1) forwards!important;
+}
+#welcomeAnim .welcome-card h1{
+ font-size:clamp(2.7rem,7vw,5.4rem)!important;color:#5b3c2d!important;
+ animation:shineText 1.1s ease-in-out infinite alternate,spinText 5s cubic-bezier(.15,.8,.2,1) forwards!important;
+}
+#welcomeAnim .welcome-card p{font-size:1.45rem!important;color:#76543d!important}
+@keyframes landing5{
+ 0%{transform:perspective(900px) translateY(-600px) rotateX(70deg) rotateZ(-25deg) scale(.45);opacity:0}
+ 18%{opacity:1}
+ 55%{transform:perspective(900px) translateY(-50px) rotateX(8deg) rotateZ(5deg) scale(1.08)}
+ 76%{transform:perspective(900px) translateY(18px) rotateX(0) rotateZ(-1deg) scale(1)}
+ 84%{transform:perspective(900px) translateY(-8px) scale(1.015)}
+ 92%{transform:perspective(900px) translateY(5px) scale(.995)}
+ 100%{transform:perspective(900px) translateY(0) scale(1)}
+}
+@keyframes spinText{
+ 0%{transform:rotateY(-900deg) rotateZ(-18deg)}
+ 55%{transform:rotateY(20deg) rotateZ(4deg)}
+ 100%{transform:rotateY(0) rotateZ(0)}
+}
+@keyframes shineText{
+ from{text-shadow:0 0 2px #fff,0 0 8px #c99a52}
+ to{text-shadow:0 0 10px #fff,0 0 28px #c99a52,0 0 50px rgba(201,154,82,.5)}
+}
+
+/* Exit / rematch controls */
+.ultimate-controls{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+.ultimate-controls button{padding:9px 18px!important}
+#cameraPanel{
+ display:none;position:fixed;right:16px;bottom:16px;width:230px;z-index:5000;
+ background:#f6ead8;border:2px solid #9a7657;border-radius:22px;padding:8px;
+ box-shadow:0 18px 45px rgba(0,0,0,.35);
+}
+#cameraPanel video{width:100%;border-radius:16px;background:#241812;display:block}
+#cameraPanel .cam-title{text-align:center;font-weight:900;margin:5px}
+@media(max-width:700px){
+ .game-area,.chat-area{border-radius:22px!important}
+ .card{border-radius:14px!important}
+ .game-area h1{font-size:2rem!important}
+ .chat-area{min-width:0!important}
+ #cameraPanel{width:180px;right:8px;bottom:8px}
+}
+</style></head>
+<body>
+
+<div class="welcome-overlay" id="welcomeAnim">
+    <div class="welcome-card">
+        <h1>🐔 مرغ دونی 🐔</h1>
+        <p style="font-size:0.9rem; margin-top:8px;">طراحی شده توسط <strong>هومن فکری فرد</strong></p>
+    </div>
+</div>
+
+<div class="main-container ultra-app" id="gameContainer" style="display:none;">
+  <section class="game-area ultra-shell">
+    <header class="topbar">
+      <div class="brand-plaque"><span>🐔</span><strong>مرغ دونی</strong><span>🐔</span><small>بازی آنلاین</small></div>
+      <div class="top-actions">
+        <button id="soundToggleBtn" class="round-btn" title="صدا">🔊</button>
+        <button id="musicToggleBtn" class="round-btn" title="موسیقی">🎵</button>
+        
+      </div>
+      <div class="connection-pill">📶 <span id="roomCodeSpan">---</span> <b>●</b></div>
+    </header>
+
+    <div class="join-panel hero-panel" id="joinPanel">
+      <div class="hero-chicken">🐔</div>
+      <h2>وارد مرغ‌دونی شو!</h2>
+      <div class="profile-widget" id="profileWidget" style="display:none;">
+        <span id="profileAvatarDisplay"></span><span class="name" id="profileNameDisplay"></span>
+        <button class="mini-btn" id="editProfileBtn">✏️ پروفایل</button>
+      </div>
+      <input type="text" id="playerName" placeholder="نام شما" maxlength="20">
+      <input type="text" id="roomIdInput" placeholder="کد اتاق (برای ورود)">
+      <div class="join-actions"><button id="createRoomBtn" class="primary-btn">✨ ساخت اتاق</button><button id="joinRoomBtn" class="secondary-btn">🚪 ورود به اتاق</button></div>
+      <div id="roomStatus" class="room-status"></div>
+      <button id="enterLobbyBtn" class="lobby-btn">🌐 ورود به لابی بازیکنان آنلاین</button>
+    </div>
+
+    <div id="lobbyPanel" class="lobby-screen" style="display:none;">
+      <div class="lobby-head"><div><b>👥 لابی آنلاین</b><small><span id="onlineCount">0</span> بازیکن آنلاین</small></div><button class="quick-btn" id="quickGameBtn">🎲 بازی سریع</button></div>
+      <div class="players lobby-players" id="lobbyPlayersArea"></div>
+      <div id="lobbyEmptyMsg" class="empty-state" style="display:none;">🐣 فعلاً بازیکن دیگری آنلاین نیست</div>
+      <button class="back-btn" id="lobbyBackBtn">↩️ بازگشت</button>
+    </div>
+
+    <div id="gamePanel" class="board-panel" style="display:none;">
+      <div class="board-head">
+        <div class="room-chip">🏠 اتاق <b id="roomCodeTop">---</b></div>
+        <div class="turn-box" id="turnText">🎯 در انتظار شروع...</div>
+        <div class="room-chip">🃏 <b id="deckCountVisual">—</b></div>
+      </div>
+      <div class="status-bar glossy-status">📊 <span id="statusText">در حال اتصال...</span></div>
+
+      <div class="game-board">
+        <div class="wood-glow"></div>
+        <div class="players" id="playersArea"></div>
+        <div class="board-center-deck">
+          <div class="deck-stack"><div class="deck-card"><span>🪹</span></div><div class="deck-card back"><span>🐔</span></div></div>
+          <div class="egg-counter"><span>🥚</span><b>۰</b><small>تخم‌های شما</small></div>
+        </div>
+        <div class="board-hint">یک کارت انتخاب کنید و اجرا کنید</div>
+      </div>
+
+      <div class="media-bar voice-dock">
+        <button class="voice-main" id="micToggleBtn">🎙️ میکروفون</button>
+        <span id="voiceStatus">🎙️ چت صوتی خاموش</span>
+        <audio id="remoteAudio" autoplay playsinline></audio>
+        <div id="remoteMediaBox" style="display:none;margin-top:8px;text-align:center;background:#2b211b;padding:7px;border-radius:14px;color:#ffe6b0;font-size:12px">📡 حریف
+<video id="remoteVideo" autoplay playsinline style="display:none;width:180px;max-width:100%;border-radius:16px;background:#111;margin-top:5px;"></video></div>
+      </div>
+
+      <div id="actionsPanel" class="action-dock" style="display:none;">
+        <button class="game-btn egg" id="layBtn">🥚 تخم‌گذاری</button>
+        <button class="game-btn chick" id="hatchBtn">🐥 جوجه کردن</button>
+        <button class="game-btn fox" id="foxBtn">🦊 روباه</button>
+        <button class="game-btn snake" id="snakeBtn">🐍 مار</button>
+        <button class="game-btn trap" id="trapBtn">🎯 تله</button>
+        <button class="game-btn draw" id="drawBtn">🎴 کشیدن کارت</button>
+        <button class="game-btn cancel" id="discardBtn">🗑️ باطل کردن</button>
+        <button class="game-btn end" id="endTurnBtn">✅ پایان نوبت</button>
+        
+      </div>
+      <button class="start-btn" id="startGameBtn" style="display:none;">🎮 شروع بازی</button>
+      <button class="leave-btn" id="leaveGameBtn" style="display:none;">🚪 خروج از بازی</button>
+      
+<div class="ultimate-controls" id="ultimateControls">
+  <button id="newGameSameOpponentBtn" type="button">🔁 بازی جدید با همین حریف</button>
+  <button id="exitGameBtn" type="button">🚪 خروج از بازی</button>
+  <button id="cameraBtn" type="button">📷 دوربین</button>
+  <button id="cameraOffBtn" type="button" style="display:none">✕ بستن دوربین</button>
+</div>
+<div id="cameraPanel">
+  <div class="cam-title">📷 دوربین من</div>
+  <video id="cameraVideo" autoplay muted playsinline></video>
+  <div style="font-size:12px;text-align:center;margin-top:5px">تصویر برای حریف هم ارسال می‌شود</div>
+</div>
+
+<div class="game-log" id="gameLog"></div>
+    </div>
+  </section>
+
+  <aside class="chat-area ultra-chat">
+    <div class="chat-head"><div><span class="chat-avatar">💬</span><b>چت مرغ‌دونی</b><small>گفت‌وگوی زنده</small></div><span class="online-dot">● آنلاین</span></div>
+    <div class="chat-messages" id="chatMessages"><div class="chat-message system-msg"><span class="chat-sender">🐣 سیستم</span><span class="chat-time">همین الآن</span><br>به چت خوش آمدید! 🎉</div></div>
+    <div class="sticker-title">استیکر و GIF</div>
+    <div class="gif-strip sticker-grid">
+      
+      
+      
+      
+      
+      
+    </div>
+    <div class="gif-display" id="gifDisplay" onclick="randomCenterGif()">🎬 برای GIF کلیک کن!</div>
+    <div class="chat-input-area"><input type="text" class="chat-input" id="chatInput" placeholder="پیامت را بنویس..."><button class="send-btn" id="sendBtn">➤</button></div>
+    <div class="chat-tools">
+<button onclick="showCustomMessage()">😀 استیکر</button>
+
+<button id="chatMicVisual" onclick="document.getElementById('micToggleBtn')?.click()">🎙️ ویس</button>
+<label class="file-send-btn">📎 فایل<input id="chatFileInput" type="file" hidden></label>
+</div>
+  </aside>
+</div>
+
+<script>
+    // ===== انیمیشن ورود =====
+    setTimeout(() => { let w = document.getElementById('welcomeAnim');
+        if(w) w.style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'flex';
+    }, 5000);
+
+    // ===== صدا =====
+    function playClick() {
+        if (!soundEnabled) return;
+        try {
+            let ctx = new (window.AudioContext || window.webkitAudioContext)();
+            let osc = ctx.createOscillator();
+            let gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = 0.1;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
+            osc.stop(ctx.currentTime + 0.15);
+        } catch(e) { console.log('صدا غیرفعال'); }
+    }
+
+    // ===== صداهای اختصاصیِ رویدادهای بازی (جدا از Voice Chat) =====
+    function playTone(freqs, durEach = 0.14, type = 'sine') {
+        if (!soundEnabled) return;
+        try {
+            let ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const now = ctx.currentTime;
+            freqs.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                const start = now + i * durEach;
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(0.16, start + 0.015);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + durEach);
+                osc.start(start);
+                osc.stop(start + durEach + 0.02);
+            });
+        } catch(e) { console.log('صدا غیرفعال'); }
+    }
+    function soundNotify()    { playTone([659.25, 987.77], 0.13); }           // درخواست بازی / حریف پیدا شد
+    function soundConfirm()   { playTone([523.25, 659.25, 783.99], 0.1); }    // قبول درخواست / شروع بازی
+    function soundReject()    { playTone([392.00, 293.66], 0.15); }           // رد درخواست
+    function soundChatMsg()   { playTone([880], 0.09); }                      // پیام چت
+    function soundDrawCard()  { playTone([440, 554.37], 0.08); }              // کشیدن کارت
+
+    function toggleSound() {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem('md_soundEnabled', soundEnabled ? 'on' : 'off');
+        updateSoundBtn();
+    }
+    function updateSoundBtn() {
+        const b = document.getElementById('soundToggleBtn');
+        if (b) b.innerText = soundEnabled ? '🔊' : '🔇';
+    }
+
+    // ===== موسیقی بی‌کلام شاد و بیس‌دار (ساخته‌شده با Web Audio، بدون فایل/سرویس خارجی) =====
+    let musicEnabled = localStorage.getItem('md_musicEnabled') !== 'off';
+    let musicCtx = null;
+    let musicTimer = null;
+    let musicStep = 0;
+    let musicMaster = null;
+    const MUSIC_BPM = 124;
+    const musicPattern = [36,36,43,36, 38,38,45,38, 41,41,48,41, 43,43,50,43];
+    const musicLead = [72,76,79,76, 74,77,81,77, 72,76,84,79, 74,77,81,79];
+
+    function ensureMusicContext() {
+        if (!musicCtx) {
+            musicCtx = new (window.AudioContext || window.webkitAudioContext)();
+            musicMaster = musicCtx.createGain();
+            musicMaster.gain.value = 0.095;
+            musicMaster.connect(musicCtx.destination);
+        }
+        if (musicCtx.state === 'suspended') musicCtx.resume();
+    }
+
+    function midiToFreq(n) { return 440 * Math.pow(2, (n - 69) / 12); }
+
+    function musicKick(t) {
+        const o = musicCtx.createOscillator(), g = musicCtx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.11);
+        g.gain.setValueAtTime(0.42, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+        o.connect(g); g.connect(musicMaster); o.start(t); o.stop(t + 0.14);
+    }
+    function musicHat(t) {
+        const b = musicCtx.createBuffer(1, musicCtx.sampleRate * 0.045, musicCtx.sampleRate);
+        const d = b.getChannelData(0); for (let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+        const s=musicCtx.createBufferSource(), g=musicCtx.createGain(); s.buffer=b; g.gain.value=0.055; s.connect(g); g.connect(musicMaster); s.start(t);
+    }
+    function musicBass(t, note) {
+        const o=musicCtx.createOscillator(), g=musicCtx.createGain(); o.type='sawtooth'; o.frequency.value=midiToFreq(note);
+        g.gain.setValueAtTime(0.0,t); g.gain.linearRampToValueAtTime(0.26,t+0.015); g.gain.exponentialRampToValueAtTime(0.001,t+0.27);
+        o.connect(g); g.connect(musicMaster); o.start(t); o.stop(t+0.29);
+    }
+    function musicLeadNote(t,note) {
+        const o=musicCtx.createOscillator(), g=musicCtx.createGain(); o.type='triangle'; o.frequency.value=midiToFreq(note);
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.075,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+        o.connect(g); g.connect(musicMaster); o.start(t); o.stop(t+0.2);
+    }
+    function musicTick() {
+        if (!musicEnabled || !musicCtx) return;
+        const stepDur = 60 / MUSIC_BPM / 2;
+        const t = musicCtx.currentTime + 0.015;
+        if (musicStep % 4 === 0) musicKick(t);
+        if (musicStep % 2 === 1) musicHat(t);
+        musicBass(t, musicPattern[musicStep % musicPattern.length]);
+        if (musicStep % 2 === 0) musicLeadNote(t, musicLead[musicStep % musicLead.length]);
+        musicStep++;
+    }
+    function startMusic() {
+        if (!musicEnabled) return;
+        ensureMusicContext();
+        if (musicTimer) return;
+        musicStep = 0;
+        musicTick();
+        musicTimer = setInterval(musicTick, (60 / MUSIC_BPM / 2) * 1000);
+    }
+    function stopMusic() {
+        if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+    }
+    function toggleMusic() {
+        musicEnabled = !musicEnabled;
+        localStorage.setItem('md_musicEnabled', musicEnabled ? 'on' : 'off');
+        updateMusicBtn();
+        if (musicEnabled) startMusic(); else stopMusic();
+    }
+    function updateMusicBtn() {
+        const b=document.getElementById('musicToggleBtn');
+        if (b) b.innerText = musicEnabled ? '🎵' : '🔇🎵';
+    }
+
+    // ===== پیام و گیف =====
+    function showBigMessage(text, isExciting = false) {
+        let div = document.createElement('div');
+        div.className = 'big-screen-message';
+        if(isExciting) {
+            div.style.color = '#ff6b6b';
+            div.style.borderColor = '#ff6b6b';
+            div.style.boxShadow = '0 0 60px rgba(255, 100, 100, 0.5)';
+        }
+        div.innerHTML = text;
+        document.body.appendChild(div);
+        setTimeout(() => { if(div && div.remove) div.remove(); }, 1800);
+        playClick();
+    }
+    function showCenterGif(text) {
+        let div = document.createElement('div');
+        div.className = 'center-gif';
+        div.innerHTML = `🎬✨ ${text} ✨😂`;
+        document.body.appendChild(div);
+        setTimeout(() => { if(div && div.remove) div.remove(); }, 2500);
+        playClick();
+    }
+    function randomCenterGif() {
+        let g = ["😂🐔 مرغ رقصون 🤣","🎬 مرغ تخم طلا 🤯","🐓🤣 خروس کونگ فو","🦊 روباه فراری 🤣","🐍 مار ترسیده 😂","🔥 تخم سورپرایز 💥","🎉 جوجه‌ها جشن گرفتن"];
+        let r = g[Math.floor(Math.random() * g.length)];
+        showCenterGif(r);
+    }
+
+    // ===== مودال =====
+    let modalElement = null;
+    function showModal(title, buttons, subtitle = '') {
+        closeModal();
+        let overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'modalOverlay';
+        let box = document.createElement('div');
+        box.className = 'modal-box';
+        let html = `<h3>${title}</h3>`;
+        if (subtitle) html += `<div class="modal-subtitle">${subtitle}</div>`;
+        html += `<div class="modal-grid">`;
+        buttons.forEach((b, idx) => {
+            const btnClass = b.class || '';
+            html += `<button class="modal-btn ${btnClass}" data-idx="${idx}">${b.text}</button>`;
+        });
+        html += `<button class="modal-btn modal-close" data-close="true">❌ بستن</button>`;
+        html += `</div>`;
+        box.innerHTML = html;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        modalElement = overlay;
+        
+        // استفاده از event delegation برای دکمه‌های مودال
+        overlay.addEventListener('click', function(e) {
+            const btn = e.target.closest('.modal-btn');
+            if (!btn) return;
+            
+            if (btn.dataset.close === 'true') {
+                closeModal();
+                return;
+            }
+            
+            const idx = parseInt(btn.dataset.idx);
+            if (!isNaN(idx) && idx >= 0 && idx < buttons.length) {
+                buttons[idx].action();
+            }
+        });
+    }
+    function closeModal() {
+        if(modalElement) { modalElement.remove(); modalElement = null; }
+    }
+
+    // ===== استیکر =====
+    function showCustomMessage() {
+        let stickers = [
+            { emoji: '🎉', text: 'تبریک میگم!' },
+            { emoji: '🔥', text: 'عالی بود!' },
+            { emoji: '😱', text: 'وااای چه بازی!' },
+            { emoji: '😂', text: 'خندیدم!' },
+            { emoji: '💪', text: 'قوی!' },
+            { emoji: '🤯', text: 'منفجر شدم!' },
+            { emoji: '🐔', text: 'مرغ برنده!' },
+            { emoji: '🦊', text: 'روباه حیله‌گر!' },
+            { emoji: '🎯', text: 'هدف گرفتم!' },
+            { emoji: '❤️', text: 'دوستت دارم!' }
+        ];
+        let btns = stickers.map(s => ({ 
+            text: `${s.emoji} ${s.text}`, 
+            class: 'purple',
+            action: () => { 
+                let msg = `${s.emoji} ${s.text}`;
+                addChatMessage(myName || 'شما', msg);
+                showBigMessage(msg, true);
+                if (socket && roomId) {
+                    socket.emit('chatMessage', { roomId, message: msg });
+                }
+                closeModal();
+            } 
+        }));
+        showModal('📢 استیکر', btns);
+    }
+
+    // ===== بازی آنلاین =====
+    let socket = null;
+    let roomId = null;
+    let myId = null;
+    let myName = '';
+    let selectedCard = null;
+    let gameState = null;
+    let socketListenersAttached = false;
+    let myLobbyName = '';
+
+    // ===== حساب کاربری و پروفایل =====
+    let myAccountId = localStorage.getItem('md_accountId');
+    if (!myAccountId) {
+        myAccountId = (crypto.randomUUID ? crypto.randomUUID() : ('acc_' + Date.now() + '_' + Math.random().toString(36).slice(2)));
+        localStorage.setItem('md_accountId', myAccountId);
+    }
+    let myProfile = null;
+    let selectedAvatar = '🐔';
+    const DEFAULT_AVATARS = ['🐔','🐓','🐣','🦊','🐍','🥚','🎮','😎','🦁','🐼'];
+
+    // ===== صداهای بازی (جدا از Voice Chat) =====
+    let soundEnabled = localStorage.getItem('md_soundEnabled') !== 'off';
+
+    // ===== Voice Chat (WebRTC) =====
+    let localStream = null;
+    let peerConnection = null;
+    let cameraStream = null;
+    let cameraOn = false;
+    let micOn = false;
+    let otherPlayerId = null;
+    let makingOffer = false;
+    let ignoreOffer = false;
+    let remoteDescriptionReady = false;
+    const pendingIceCandidates = [];
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // ===== نمایش آواتار (اموجی یا تصویر آپلودی) =====
+    function renderAvatar(avatar, big) {
+        const a = avatar || '🐔';
+        if (a.startsWith('data:')) {
+            return `<img src="${a}" class="avatar-img${big ? ' big' : ''}">`;
+        }
+        return `<span class="avatar-emoji" style="${big ? 'font-size:4rem;' : ''}">${escapeHtml(a)}</span>`;
+    }
+
+    function updateProfileWidget() {
+        const widget = document.getElementById('profileWidget');
+        if (!widget) return;
+        if (!myProfile) { widget.style.display = 'none'; return; }
+        widget.style.display = 'flex';
+        document.getElementById('profileAvatarDisplay').innerHTML = renderAvatar(myProfile.avatar);
+        document.getElementById('profileNameDisplay').innerText = myProfile.username;
+        const nameInput = document.getElementById('playerName');
+        if (nameInput && !nameInput.value.trim()) {
+            nameInput.value = myProfile.username;
+        }
+    }
+
+    // ===== ساخت/ویرایش پروفایل =====
+    function openProfileEditor() {
+        selectedAvatar = myProfile?.avatar || '🐔';
+        closeModal();
+        let overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'modalOverlay';
+        let box = document.createElement('div');
+        box.className = 'modal-box';
+        box.innerHTML = `
+            <h3>👤 ${myProfile ? 'ویرایش پروفایل' : 'ساخت پروفایل'}</h3>
+            <input type="text" class="profile-input" id="profileUsernameInput" placeholder="نام کاربری" maxlength="20" value="${myProfile ? escapeHtml(myProfile.username) : ''}">
+            <div class="modal-subtitle">یک آواتار انتخاب کن:</div>
+            <div class="avatar-picker" id="avatarPicker">
+                ${DEFAULT_AVATARS.map(a => `<div class="avatar-option${selectedAvatar === a ? ' selected' : ''}" data-avatar="${a}">${a}</div>`).join('')}
+            </div>
+            <label class="upload-avatar-label">📤 آپلود عکس از دستگاه
+                <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+            </label>
+            <div id="avatarUploadPreview" style="margin:8px 0;"></div>
+            <div class="modal-grid">
+                <button class="modal-btn green" id="saveProfileBtn">💾 ذخیره</button>
+            </div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        modalElement = overlay;
+
+        // اگر آواتار فعلی یک تصویر آپلودی است، در پیش‌نمایش نشانش بده
+        if (selectedAvatar.startsWith('data:')) {
+            document.getElementById('avatarUploadPreview').innerHTML = renderAvatar(selectedAvatar, true);
+        }
+
+        overlay.querySelectorAll('.avatar-option').forEach(el => {
+            el.addEventListener('click', () => {
+                selectedAvatar = el.dataset.avatar;
+                document.getElementById('avatarUploadPreview').innerHTML = '';
+                overlay.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+                el.classList.add('selected');
+            });
+        });
+
+        overlay.querySelector('#avatarFileInput').addEventListener('change', (e) => {
+            handleAvatarUpload(e.target.files[0], overlay);
+        });
+
+        overlay.querySelector('#saveProfileBtn').addEventListener('click', () => {
+            const username = document.getElementById('profileUsernameInput').value.trim();
+            if (username.length < 2) { alert('نام کاربری باید حداقل ۲ حرف باشد'); return; }
+            socket.emit('saveProfile', { accountId: myAccountId, username, avatar: selectedAvatar });
+            closeModal();
+        });
+    }
+
+    // آپلود آواتار: فقط تصویر، حجم محدود، و فشرده‌سازی با canvas قبل از ارسال
+    function handleAvatarUpload(file, overlay) {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            alert('فقط فایل تصویری مجاز است');
+            return;
+        }
+        const MAX_ORIGINAL_SIZE = 5 * 1024 * 1024; // 5MB ورودی مجاز، بعداً فشرده می‌شود
+        if (file.size > MAX_ORIGINAL_SIZE) {
+            alert('حجم تصویر باید کمتر از ۵ مگابایت باشد');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const size = 160;
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                // برش مربعی از وسط تصویر
+                const minSide = Math.min(img.width, img.height);
+                const sx = (img.width - minSide) / 2;
+                const sy = (img.height - minSide) / 2;
+                ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                selectedAvatar = dataUrl;
+                if (overlay) {
+                    overlay.querySelectorAll('.avatar-option').forEach(o => o.classList.remove('selected'));
+                    document.getElementById('avatarUploadPreview').innerHTML = renderAvatar(dataUrl, true);
+                }
+            };
+            img.onerror = () => alert('خطا در بارگذاری تصویر');
+            img.src = e.target.result;
+        };
+        reader.onerror = () => alert('خطا در خواندن فایل');
+        reader.readAsDataURL(file);
+    }
+
+    // ===== نمایش پروفایل یک بازیکن دیگر =====
+    function showPlayerProfileModal(data) {
+        closeModal();
+        let overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'modalOverlay';
+        let box = document.createElement('div');
+        box.className = 'modal-box';
+        box.innerHTML = `
+            <h3>👤 پروفایل بازیکن</h3>
+            <div style="margin:10px 0;">${renderAvatar(data.avatar, true)}</div>
+            <div class="modal-subtitle" style="font-size:1.1rem; font-weight:bold; color:#7b3f00;">${escapeHtml(data.name)}</div>
+            <div class="profile-stats-row">
+                <span>🎮 ${data.gamesPlayed} بازی</span>
+                <span>🏆 ${data.wins} برد</span>
+                <span>💔 ${data.losses} باخت</span>
+            </div>
+            <div style="margin-top:18px;">
+                <button class="modal-btn modal-close" data-close-profile="true">❌ بستن</button>
+            </div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        modalElement = overlay;
+    }
+
+    function updateStatus(text) {
+        const el = document.getElementById('statusText');
+        if (el) el.innerHTML = text;
+    }
+
+    function addLog(msg) {
+        const logDiv = document.getElementById('gameLog');
+        if (logDiv) {
+            // استفاده از insertAdjacentHTML به جای innerHTML +=
+            logDiv.insertAdjacentHTML('beforeend', `<div>🐔 ${msg}</div>`);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        console.log(msg);
+        playClick();
+    }
+
+    function connectSocket() {
+        if (socket) return;
+        socket = io();
+        
+        // جلوگیری از ثبت چندباره listenerها
+        if (!socketListenersAttached) {
+            socketListenersAttached = true;
+            
+            socket.on('connect', () => { 
+                myId = socket.id; 
+                updateStatus('✅ متصل به سرور');
+                document.getElementById('roomStatus').innerHTML = '✅ متصل به سرور';
+                addLog('✅ به سرور متصل شدی!');
+                socket.emit('loadProfile', { accountId: myAccountId });
+            });
+            
+            socket.on('connect_error', () => {
+                updateStatus('❌ اتصال قطع شد!');
+                document.getElementById('roomStatus').innerHTML = '❌ مشکل در اتصال به سرور';
+            });
+            
+            socket.on('disconnect', () => {
+                updateStatus('⚠️ اتصال قطع شد!');
+                document.getElementById('roomStatus').innerHTML = '⚠️ اتصال قطع شد!';
+            });
+            
+            socket.on('roomCreated', (data) => {
+                roomId = data.roomId;
+                document.getElementById('roomCodeSpan').innerText = roomId;
+                document.getElementById('roomStatus').innerHTML = `✅ اتاق ${roomId} ساخته شد!`;
+                updateStatus(`🏠 اتاق ${roomId} - منتظر بازیکنان`);
+                document.getElementById('gamePanel').style.display = 'block';
+                document.getElementById('joinPanel').style.display = 'none';
+                document.getElementById('actionsPanel').style.display = 'none';
+                addLog(`🏠 اتاق ${roomId} ساخته شد`);
+            });
+            
+            socket.on('roomUpdate', (room) => {
+                renderRoom(room);
+                const me = room.players.find(p => p.id === myId);
+                if (me && room.host === myId && room.players.length >= 2) {
+                    document.getElementById('startGameBtn').style.display = 'block';
+                    updateStatus(`👥 ${room.players.length} بازیکن - آماده شروع`);
+                } else {
+                    document.getElementById('startGameBtn').style.display = 'none';
+                    updateStatus(`👥 ${room.players.length} بازیکن - منتظر دیگران`);
+                }
+            });
+            
+            socket.on('gameState', (state) => {
+                gameState = state;
+                const otherP = state.players.find(p => p.id !== myId);
+                if (otherP) otherPlayerId = otherP.id;
+                renderGame(state);
+                const me = state.players.find(p => p.id === myId);
+                if (me && state.currentTurn === myId && !state.winner) {
+                    document.getElementById('actionsPanel').style.display = 'block';
+                    updateStatus(`🎯 نوبت شما - ${me.hand.length} کارت`);
+                } else {
+                    document.getElementById('actionsPanel').style.display = 'none';
+                    if (state.winner) {
+                        const winner = state.players.find(p => p.id === state.winner);
+                        updateStatus(`🏆 برنده: ${winner ? winner.name : '...'} 🏆`);
+                    } else {
+                        const current = state.players.find(p => p.id === state.currentTurn);
+                        updateStatus(`🎯 نوبت: ${current ? current.name : '...'}`);
+                    }
+                }
+                if (state.winner) {
+                    const winner = state.players.find(p => p.id === state.winner);
+                    showBigMessage(`🏆 برنده: ${winner ? winner.name : '...'} 🏆`);
+                }
+            });
+            
+            socket.on('roomError', (msg) => { alert(msg); });
+
+            // ===== لابی بازیکنان آنلاین =====
+            socket.on('registrationSuccess', (data) => {
+                myId = data.id;
+                myLobbyName = data.name;
+                document.getElementById('joinPanel').style.display = 'none';
+                document.getElementById('lobbyPanel').style.display = 'block';
+                addLog(`🌐 وارد لابی آنلاین شدی: ${data.name}`);
+            });
+
+            socket.on('registrationError', (msg) => {
+                alert(msg);
+            });
+
+            socket.on('playerListUpdate', (list) => {
+                renderLobby(list);
+            });
+
+            // ===== پروفایل =====
+            socket.on('profileData', (data) => {
+                const profile = data.profile;
+                if (!profile) {
+                    // حساب وجود ندارد -> کاربر باید پروفایل بسازد
+                    if (!document.getElementById('gamePanel') || document.getElementById('gamePanel').style.display === 'none') {
+                        openProfileEditor();
+                    }
+                    return;
+                }
+                myProfile = profile;
+                updateProfileWidget();
+            });
+
+            socket.on('profileError', (msg) => {
+                showBigMessage(`❌ ${msg}`, true);
+            });
+
+            socket.on('profileInfo', (data) => {
+                showPlayerProfileModal(data);
+            });
+
+            socket.on('profileInfoError', (msg) => {
+                showBigMessage(`❌ ${msg}`, true);
+            });
+
+            socket.on('gameRequest', (data) => {
+                soundNotify();
+                showGameRequestModal(data);
+            });
+            socket.on('rematchRequest', (data) => {
+                soundNotify();
+                showModal('🔁 درخواست بازی جدید', [
+                    {text:`قبول — ${data.fromName}`, class:'green', action:()=>{ socket.emit('acceptRematch',{fromId:data.fromId, roomId:data.roomId}); closeModal(); }},
+                    {text:'رد کردن', class:'red', action:()=>{ socket.emit('rejectRematch',{fromId:data.fromId}); closeModal(); }}
+                ], `${data.fromName} می‌خواهد دوباره با شما بازی کند.`);
+            });
+            socket.on('rematchRejected', d => showBigMessage(`❌ ${d.byName} درخواست بازی جدید را رد کرد`, true));
+
+
+            socket.on('gameRequestError', (msg) => {
+                showBigMessage(`❌ ${msg}`, true);
+            });
+
+            socket.on('quickGameError', (msg) => {
+                if (msg.includes('منتظر بازیکن')) {
+                    showBigMessage(msg, false);
+                } else {
+                    showBigMessage(`❌ ${msg}`, true);
+                }
+            });
+
+            socket.on('gameError', (msg) => {
+                showBigMessage(`❌ ${msg}`, true);
+            });
+
+            socket.on('gameRejected', (data) => {
+                closeModal();
+                soundReject();
+                addLog(`❌ ${data.byName} درخواست بازی شما را رد کرد`);
+                showBigMessage(`❌ ${data.byName} درخواست را رد کرد`, true);
+            });
+
+            socket.on('gameRequestCancelled', (data) => {
+                closeModal();
+                addLog(`⚠️ درخواست بازی لغو شد${data?.reason ? ' - ' + data.reason : ''}`);
+            });
+
+            socket.on('gameStarted', (data) => {
+                roomId = data.roomId;
+                closeModal();
+                soundConfirm();
+                closeVoiceChat();
+                document.getElementById('lobbyPanel').style.display = 'none';
+                document.getElementById('joinPanel').style.display = 'none';
+                document.getElementById('gamePanel').style.display = 'block';
+                document.getElementById('actionsPanel').style.display = 'none';
+                document.getElementById('startGameBtn').style.display = 'none';
+                document.getElementById('roomCodeSpan').innerText = roomId;
+                updateStatus('🎮 بازی شروع شد!');
+                addLog(`🎮 بازی در اتاق ${roomId} شروع شد`);
+            });
+
+            socket.on('webrtc-offer', handleIncomingOffer);
+            socket.on('webrtc-answer', handleIncomingAnswer);
+            socket.on('webrtc-ice-candidate', handleIncomingIceCandidate);
+            socket.on('webrtc-peer-left', () => {
+                addLog('📴 حریف از تماس صوتی/تصویری خارج شد');
+                closeVoiceChat();
+            });
+
+            socket.on('chatMessage', (data) => {
+                if (data.sender !== myName) soundChatMsg();
+                addChatMessage(data.sender, data.message, data.time);
+            });
+            socket.on('chatMedia', (data) => {
+                if (data.sender !== myName) soundChatMsg();
+                addMediaChatMessage(data);
+            });
+
+            socket.on('actionDone', (data) => {
+                addChatMessage('🎮 سیستم', `${data.player} ${data.action}`);
+                showBigMessage(`🎮 ${data.player} ${data.action}`, false);
+            });
+        }
+    }
+
+    function createRoom() {
+        let name = document.getElementById('playerName').value.trim();
+        if (!name) { alert('نام خود را وارد کن'); return; }
+        myName = name;
+        if (!socket) connectSocket();
+        let roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        setTimeout(() => {
+            socket.emit('createRoom', { roomId: roomCode, playerName: name });
+            document.getElementById('joinPanel').style.display = 'none';
+            document.getElementById('gamePanel').style.display = 'block';
+            document.getElementById('roomCodeSpan').innerText = roomCode; const top=document.getElementById('roomCodeTop'); if(top) top.innerText=roomCode;
+        }, 300);
+    }
+
+    function joinRoom() {
+        let name = document.getElementById('playerName').value.trim();
+        let code = document.getElementById('roomIdInput').value.trim().toUpperCase();
+        if (!name || !code) { alert('نام و کد اتاق را وارد کن'); return; }
+        myName = name;
+        if (!socket) connectSocket();
+        setTimeout(() => {
+            socket.emit('joinRoom', { roomId: code, playerName: name });
+            roomId = code;
+            document.getElementById('joinPanel').style.display = 'none';
+            document.getElementById('gamePanel').style.display = 'block';
+            document.getElementById('roomCodeSpan').innerText = code; const top=document.getElementById('roomCodeTop'); if(top) top.innerText=code;
+            document.getElementById('roomStatus').innerHTML = `✅ به اتاق ${code} پیوستی!`;
+            addLog(`🚪 به اتاق ${code} پیوستی`);
+        }, 300);
+    }
+
+    // ================= VOICE CHAT (WebRTC) =================
+    // فقط صدا؛ هیچ دوربین یا ویدیویی در این نسخه استفاده نمی‌شود.
+    function setVoiceStatus(text) {
+        const el = document.getElementById('voiceStatus');
+        if (el) el.innerText = text;
+    }
+
+    function ensurePeerConnection() {
+        if (peerConnection) return peerConnection;
+
+        const pc = new RTCPeerConnection({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.cloudflare.com:3478' }
+            ]
+        });
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate && otherPlayerId && socket) {
+                socket.emit('webrtc-ice-candidate', {
+                    to: otherPlayerId,
+                    candidate: event.candidate
+                });
+            }
+        };
+
+        pc.ontrack = (event) => {
+            const stream = event.streams && event.streams[0];
+            if (!stream) return;
+            const audio = document.getElementById('remoteAudio');
+            const video = document.getElementById('remoteVideo');
+            if (event.track.kind === 'audio' && audio) {
+                if (audio.srcObject !== stream) audio.srcObject = stream;
+                audio.play().catch(() => {});
+                setVoiceStatus('🔊 صدای حریف وصل شد');
+            }
+            if (event.track.kind === 'video' && video) {
+                video.srcObject = stream;
+                video.style.display = 'block';
+                const box=document.getElementById('remoteMediaBox'); if(box) box.style.display='block';
+            }
+        };
+
+        pc.onconnectionstatechange = () => {
+            if (pc.connectionState === 'connected') {
+                setVoiceStatus(micOn ? '🟢 میکروفون روشن • اتصال صوتی برقرار' : '🔊 اتصال صوتی برقرار');
+            } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+                setVoiceStatus('🟠 اتصال صوتی قطع شد');
+            }
+        };
+
+        pc.onnegotiationneeded = async () => {
+            if (!otherPlayerId || !socket || (!micOn && !cameraOn) || makingOffer) return;
+            try {
+                makingOffer = true;
+                await pc.setLocalDescription(await pc.createOffer());
+                socket.emit('webrtc-offer', {
+                    to: otherPlayerId,
+                    offer: pc.localDescription
+                });
+            } catch (err) {
+                console.error('WebRTC offer error:', err);
+            } finally {
+                makingOffer = false;
+            }
+        };
+
+        peerConnection = pc;
+        return pc;
+    }
+
+    async function flushIceCandidates() {
+        if (!peerConnection || !remoteDescriptionReady) return;
+        while (pendingIceCandidates.length) {
+            const candidate = pendingIceCandidates.shift();
+            try { await peerConnection.addIceCandidate(candidate); }
+            catch (err) { console.warn('ICE candidate error:', err); }
+        }
+    }
+
+    async function handleIncomingOffer({ from, offer }) {
+        otherPlayerId = from;
+        const pc = ensurePeerConnection();
+        const offerCollision = makingOffer || pc.signalingState !== 'stable';
+        const polite = String(myId) > String(from);
+        ignoreOffer = !polite && offerCollision;
+        if (ignoreOffer) return;
+
+        try {
+            await pc.setRemoteDescription(offer);
+            remoteDescriptionReady = true;
+            await flushIceCandidates();
+            await pc.setLocalDescription(await pc.createAnswer());
+            socket.emit('webrtc-answer', { to: from, answer: pc.localDescription });
+            setVoiceStatus('🔊 در حال اتصال به حریف...');
+        } catch (err) {
+            console.error('WebRTC offer handling error:', err);
+        }
+    }
+
+    async function handleIncomingAnswer({ answer }) {
+        if (!peerConnection) return;
+        try {
+            await peerConnection.setRemoteDescription(answer);
+            remoteDescriptionReady = true;
+            await flushIceCandidates();
+            setVoiceStatus('🔊 اتصال صوتی برقرار شد');
+        } catch (err) {
+            console.error('WebRTC answer error:', err);
+        }
+    }
+
+    async function handleIncomingIceCandidate({ candidate }) {
+        if (!candidate) return;
+        if (!peerConnection || !remoteDescriptionReady) {
+            pendingIceCandidates.push(candidate);
+            return;
+        }
+        try { await peerConnection.addIceCandidate(candidate); }
+        catch (err) { console.warn('ICE error:', err); }
+    }
+
+    function updateMicBtn() {
+        const b = document.getElementById('micToggleBtn');
+        if (!b) return;
+        b.innerText = micOn ? '🎙️ روشن' : '🔇 میکروفون';
+        b.classList.toggle('on', micOn);
+    }
+
+    async function toggleMic() {
+        if (!roomId) {
+            showBigMessage('❌ ابتدا باید وارد بازی شوی', true);
+            return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showBigMessage('❌ مرورگر اجازه استفاده از میکروفون را نمی‌دهد', true);
+            return;
+        }
+
+        if (micOn) {
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => {
+                    track.enabled = false;
+                    track.stop();
+                });
+            }
+            micOn = false;
+            updateMicBtn();
+            setVoiceStatus('🔇 چت صوتی خاموش');
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const track = stream.getAudioTracks()[0];
+            localStream = stream;
+            const pc = ensurePeerConnection();
+            const oldAudioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+            if (oldAudioSender) await oldAudioSender.replaceTrack(track);
+            else pc.addTrack(track, stream);
+            micOn = true;
+            updateMicBtn();
+            setVoiceStatus('🎙️ میکروفون روشن • در حال اتصال...');
+        } catch (err) {
+            console.error('Microphone error:', err);
+            showBigMessage('❌ دسترسی به میکروفون داده نشد', true);
+        }
+    }
+
+    function closeVoiceChat() {
+        if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; cameraOn = false; }
+        const rv = document.getElementById('remoteVideo'); if (rv) { rv.srcObject = null; rv.style.display = 'none'; }
+        if (peerConnection) {
+            peerConnection.ontrack = null;
+            peerConnection.onicecandidate = null;
+            peerConnection.close();
+            peerConnection = null;
+        }
+        if (localStream) {
+            localStream.getTracks().forEach(t => t.stop());
+            localStream = null;
+        }
+        pendingIceCandidates.length = 0;
+        remoteDescriptionReady = false;
+        makingOffer = false;
+        ignoreOffer = false;
+        micOn = false;
+        otherPlayerId = null;
+        updateMicBtn();
+        const audio = document.getElementById('remoteAudio');
+        if (audio) audio.srcObject = null;
+        setVoiceStatus('🎙️ چت صوتی خاموش');
+    }
+    // ================================================
+
+    function enterLobby() {
+        let name = document.getElementById('playerName').value.trim();
+        if (!name) { alert('نام خود را وارد کن'); return; }
+        myName = name;
+        if (!socket) connectSocket();
+        setTimeout(() => {
+            socket.emit('registerPlayer', {
+                playerName: name,
+                accountId: myAccountId,
+                avatar: myProfile?.avatar || selectedAvatar || '🐔'
+            });
+        }, 300);
+    }
+
+    function backToJoinPanel() {
+        document.getElementById('lobbyPanel').style.display = 'none';
+        document.getElementById('joinPanel').style.display = 'block';
+    }
+
+    function quickGame() {
+        if (!socket) return;
+        socket.emit('quickGame');
+    }
+
+    function renderLobby(list) {
+        const area = document.getElementById('lobbyPlayersArea');
+        const emptyMsg = document.getElementById('lobbyEmptyMsg');
+        const countSpan = document.getElementById('onlineCount');
+        const quickBtn = document.getElementById('quickGameBtn');
+        if (!area) return;
+
+        countSpan.innerText = list.length;
+
+        // وضعیت خودم را برای فعال/غیرفعال کردن دکمه «بازی سریع» بررسی کن
+        const me = list.find(p => p.id === myId);
+        if (quickBtn) {
+            quickBtn.disabled = !me || me.status !== 'ready';
+            quickBtn.style.opacity = quickBtn.disabled ? '0.5' : '1';
+            quickBtn.style.cursor = quickBtn.disabled ? 'not-allowed' : 'pointer';
+        }
+
+        // بازیکن خودم در لیست نمایش داده نشود
+        const others = list.filter(p => p.id !== myId);
+
+        if (others.length === 0) {
+            area.innerHTML = '';
+            emptyMsg.style.display = 'block';
+            return;
+        }
+        emptyMsg.style.display = 'none';
+
+        const statusLabels = {
+            ready: '🟢 آماده بازی',
+            requesting: '📨 در حال درخواست...',
+            requested: '📩 درخواست دریافت کرده',
+            playing: '🎮 در حال بازی'
+        };
+
+        area.innerHTML = others.map(p => {
+            const statusText = statusLabels[p.status] || p.status;
+            const btn = p.status === 'ready'
+                ? `<button class="action-btn" data-request-id="${p.id}" style="margin-top:8px; width:100%; background:#27ae60; color:white; box-shadow:0 4px 0 #1a6b3b;">🎮 درخواست بازی</button>`
+                : '';
+            return `
+                <div class="player">
+                    <div class="player-name player-clickable" data-view-profile="${p.id}"><span>${renderAvatar(p.avatar)} ${escapeHtml(p.name)}</span></div>
+                    <div style="font-size:0.85rem; color:#7b3f00;">${statusText}</div>
+                    ${btn}
+                </div>
+            `;
+        }).join('');
+    }
+
+    // ===== مشاهده پروفایل بازیکن دیگر با کلیک =====
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-view-profile]');
+        if (!el || !socket) return;
+        socket.emit('getProfile', { targetId: el.dataset.viewProfile });
+    });
+
+    // ===== بستن پنجره پروفایل =====
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-close-profile]');
+        if (!btn) return;
+        closeModal();
+    });
+
+    // ===== ارسال درخواست بازی از لابی =====
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-request-id]');
+        if (!btn) return;
+        if (!socket) return;
+        const targetId = btn.dataset.requestId;
+        socket.emit('requestGame', { targetId });
+        showBigMessage('📨 درخواست بازی ارسال شد...', false);
+    });
+
+    // ===== پنجره‌ی دریافت درخواست بازی (قبول / رد) =====
+    function showGameRequestModal(data) {
+        closeModal();
+        let overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'modalOverlay';
+        let box = document.createElement('div');
+        box.className = 'modal-box';
+        box.innerHTML = `
+            <h3>📨 درخواست بازی</h3>
+            <div class="modal-subtitle">${escapeHtml(data.fromName)} می‌خواهد با شما بازی کند</div>
+            <div class="modal-grid">
+                <button class="modal-btn green" id="acceptGameBtn">✅ قبول</button>
+                <button class="modal-btn red" id="rejectGameBtn">❌ رد</button>
+            </div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        modalElement = overlay;
+
+        overlay.querySelector('#acceptGameBtn').addEventListener('click', () => {
+            soundConfirm();
+            socket.emit('acceptGame', { fromId: data.fromId });
+            closeModal();
+        });
+        overlay.querySelector('#rejectGameBtn').addEventListener('click', () => {
+            soundReject();
+            socket.emit('rejectGame', { fromId: data.fromId });
+            closeModal();
+        });
+    }
+
+    function startGame() {
+        socket.emit('startGame', { roomId });
+        document.getElementById('startGameBtn').style.display = 'none';
+        updateStatus('🎮 بازی شروع شد!');
+        addLog('🎮 بازی شروع شد!');
+    }
+
+    // ===== رندرینگ با Event Delegation =====
+    function renderRoom(room) {
+        let container = document.getElementById('playersArea');
+        // فقط زمانی که محتوا تغییر کرده بازنویسی کنیم
+        let html = '';
+        room.players.forEach(p => {
+            html += `<div class="player" data-player-id="${p.id}">
+                <div class="player-name"><span>${p.name} ${p.id === myId ? '👈' : ''}</span></div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderGame(state) {
+        let container = document.getElementById('playersArea');
+        // ساختن HTML برای همه بازیکنان
+        let html = '';
+        state.players.forEach(p => {
+            let isCurrent = state.currentTurn === p.id;
+            let isMyTurn = p.id === myId && state.currentTurn === myId && !state.winner;
+            
+            // ساخت کارت‌ها با data attributes به جای onclick
+            let handHtml = '';
+            if (isMyTurn) {
+                handHtml = p.hand.map(c => {
+                    const isSelected = (selectedCard === c);
+                    return `<div class="card ${isSelected ? 'selected' : ''}" data-card="${c}" data-player-id="${p.id}"><span>${getIcon(c)}</span><br>${c}</div>`;
+                }).join('');
+            } else {
+                handHtml = p.hand.map(() => `<div class="card card-back"></div>`).join('');
+            }
+            
+            html += `<div class="player ${isCurrent ? 'current' : ''}" data-player-id="${p.id}">
+                <div class="player-name"><span>${p.name} ${p.id === myId ? '(شما)' : ''}</span><span>🃏 ${p.hand.length}</span></div>
+                <div class="stats"><span class="eggs">🥚 ${p.eggs}</span><span class="chicks">🐥 ${p.chicks}</span></div>
+                <div class="hand" data-player-id="${p.id}">${handHtml}</div>
+            </div>`;
+        });
+        container.innerHTML = html;
+        
+        document.getElementById('turnText').innerHTML = state.winner ? '🏁 بازی تمام شد!' : `🎯 نوبت: ${state.players.find(p => p.id === state.currentTurn)?.name || '...'}`; const dc=document.getElementById('deckCountVisual'); if(dc && state.deck) dc.innerText=state.deck.length;
+    }
+
+    // ===== Event Delegation برای کارت‌ها =====
+    document.getElementById('playersArea').addEventListener('click', function(e) {
+        const card = e.target.closest('.card');
+        if (!card) return;
+        
+        // اگر کارت پشت باشد یا انتخاب‌پذیر نباشد
+        if (card.classList.contains('card-back')) return;
+        
+        const cardName = card.dataset.card;
+        if (cardName) {
+            // فقط اگر نوبت ما باشد و بازی تمام نشده باشد
+            if (gameState && gameState.currentTurn === myId && !gameState.winner) {
+                selectCard(cardName);
+            }
+        }
+    });
+
+    // ===== Event Delegation برای دکمه‌های مودال =====
+    // (در showModal پیاده‌سازی شده)
+
+    function getIcon(c) {
+        const map = { 'مرغ':'hen.jpg','خروس':'rooster.png','لانه':'nest.png','روباه':'fox.png','مار':'snake.png','تله':'trap.png' };
+        const file = map[c];
+        return file ? `<img class="card-art" src="/assets/cards/${file}" alt="${c}">` : '🃏';
+    }
+
+    function selectCard(c) {
+        playClick();
+        if (selectedCard === c) {
+            selectedCard = null;
+        } else {
+            selectedCard = c;
+        }
+        // فقط رندر مجدد با انتخاب جدید
+        if (gameState) {
+            renderGame(gameState);
+        }
+    }
+
+    function addChatMessage(sender, msg, time) {
+        let chatDiv = document.getElementById('chatMessages');
+        chatDiv.insertAdjacentHTML('beforeend',
+            `<div class="chat-message"><span class="chat-sender">${sender}</span><span class="chat-time">${time || new Date().toLocaleTimeString()}</span><br>${msg}</div>`
+        );
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function addMediaChatMessage(data) {
+        const chatDiv=document.getElementById('chatMessages');
+        if(!chatDiv) return;
+        const safeName=String(data.name||'فایل').replace(/[<>&"]/g,'');
+        let body='';
+        if(data.kind==='file'){
+            if((data.mime||'').startsWith('image/') && data.content){
+                body=`<img src="${data.content}" alt="${safeName}" style="max-width:100%;max-height:220px;border-radius:12px;display:block;margin-top:6px;">`;
+            }
+            body += `<a href="${data.content}" download="${safeName}" style="display:block;margin-top:6px;">📎 ${safeName} — دریافت فایل</a>`;
+        } else if(data.kind==='gif'){
+            body=`<img src="${data.content}" alt="GIF" style="max-width:100%;max-height:260px;border-radius:14px;display:block;margin-top:6px;object-fit:contain;">`;
+        } else if(data.kind==='sticker'){
+            body=`<div style="font-size:42px;text-align:center;margin-top:6px;">${String(data.content||'😀')}</div>`;
+        }
+        chatDiv.insertAdjacentHTML('beforeend',
+          `<div class="chat-message"><span class="chat-sender">${String(data.sender||'بازیکن').replace(/[<>&"]/g,'')}</span><span class="chat-time">${data.time||new Date().toLocaleTimeString()}</span><br>${body}</div>`
+        );
+        chatDiv.scrollTop=chatDiv.scrollHeight;
+    }
+
+    async function sendSharedGif() {
+        if (!socket || !roomId) { alert('ابتدا وارد بازی شو.'); return; }
+        try {
+            const response = await fetch('/assets/chat/chicken.gif', { cache: 'no-store' });
+            const blob = await response.blob();
+            if (blob.size > 700 * 1024) { alert('GIF بیش از حد بزرگ است.'); return; }
+            const reader = new FileReader();
+            reader.onload = () => {
+                socket.emit('chatMedia', {
+                    roomId, kind: 'gif', content: reader.result,
+                    name: 'chicken.gif', mime: 'image/gif', size: blob.size
+                });
+            };
+            reader.readAsDataURL(blob);
+        } catch (e) {
+            console.error(e);
+            alert('ارسال GIF انجام نشد.');
+        }
+    }
+
+    function sendFileToChat(file) {
+        if (!socket || !roomId) { alert('ابتدا وارد بازی شو.'); return; }
+        const max = 5 * 1024 * 1024;
+        if (file.size > max) { alert('حداکثر حجم فایل ۵ مگابایت است.'); return; }
+        const blocked = /\.(exe|bat|cmd|com|scr|msi|ps1|vbs|js)$/i.test(file.name);
+        if (blocked) { alert('این نوع فایل برای امنیت مجاز نیست.'); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+            socket.emit('chatMedia', {
+                roomId, kind: 'file', content: reader.result,
+                name: file.name, mime: file.type || 'application/octet-stream', size: file.size
+            });
+        };
+        reader.onerror = () => alert('خواندن فایل ناموفق بود.');
+        reader.readAsDataURL(file);
+    }
+
+    function sendChat() {
+        let input = document.getElementById('chatInput');
+        let msg = input.value.trim();
+        if (msg) {
+            socket.emit('chatMessage', { roomId, message: msg });
+            input.value = '';
+        }
+    }
+
+    function sendAction(action, data, actionName) {
+        if (!socket) { addLog('❌ به سرور متصل نیستی!'); return; }
+        if (!roomId) { addLog('❌ هنوز وارد اتاق نشدی!'); return; }
+        socket.emit('gameAction', { roomId, action, data });
+        selectedCard = null;
+        if (actionName) {
+            socket.emit('actionDone', { roomId, player: myName, action: actionName });
+            addLog(`✅ ${actionName}`);
+        }
+    }
+
+    // ===== توابع اکشن با مودال =====
+    function layEgg() {
+        sendAction('lay', null, 'تخم گذاشت 🥚');
+    }
+
+    function hatch() {
+        sendAction('hatch', null, 'جوجه کرد 🐥');
+    }
+
+    function foxAttack() {
+        if (!gameState) {
+            addLog('⏳ در حال دریافت وضعیت...');
+            socket.emit('getGameState', { roomId });
+            // استفاده از setTimeout به جای حلقه
+            setTimeout(() => { if (gameState) foxAttack(); }, 500);
+            return;
+        }
+        const others = gameState.players.filter(p => p.id !== myId && p.eggs > 0);
+        if (others.length === 0) {
+            addLog('❌ هیچ بازیکنی تخم ندارد!');
+            showBigMessage('❌ هیچ بازیکنی تخم ندارد!', true);
+            return;
+        }
+        let btns = others.map(p => ({
+            text: `${p.name} (🥚 ${p.eggs})`,
+            class: 'green',
+            action: () => {
+                sendAction('fox', { target: p.id }, `با روباه به ${p.name} حمله کرد 🦊`);
+                closeModal();
+            }
+        }));
+        showModal('🦊 به کدام بازیکن حمله کنی؟', btns, 'انتخاب کن تا روباه بهش حمله کنه');
+    }
+
+    function snakeAttack() {
+        if (!gameState) {
+            addLog('⏳ در حال دریافت وضعیت...');
+            socket.emit('getGameState', { roomId });
+            setTimeout(() => { if (gameState) snakeAttack(); }, 500);
+            return;
+        }
+        const others = gameState.players.filter(p => p.id !== myId && p.eggs > 0);
+        if (others.length === 0) {
+            addLog('❌ هیچ بازیکنی تخم ندارد!');
+            showBigMessage('❌ هیچ بازیکنی تخم ندارد!', true);
+            return;
+        }
+        let btns = others.map(p => ({
+            text: `${p.name} (🥚 ${p.eggs})`,
+            class: 'green',
+            action: () => {
+                closeModal();
+                let cntBtns = [
+                    { text: '💔 ۱ تخم', class: 'green', action: () => {
+                        sendAction('snake', { target: p.id, count: 1 }, `${p.name} را با مار زد 🐍 (۱ تخم)`);
+                        closeModal();
+                    }},
+                    { text: '💔💔 ۲ تخم', class: 'red', action: () => {
+                        sendAction('snake', { target: p.id, count: 2 }, `${p.name} را با مار زد 🐍 (۲ تخم)`);
+                        closeModal();
+                    }}
+                ];
+                showModal(`🐍 برای ${p.name} چند تخم بشکنی؟`, cntBtns);
+            }
+        }));
+        showModal('🐍 به کدام بازیکن حمله کنی؟', btns, 'انتخاب کن تا مار بهش حمله کنه');
+    }
+
+    function trapAction() {
+        if (!gameState) {
+            addLog('⏳ در حال دریافت وضعیت...');
+            socket.emit('getGameState', { roomId });
+            setTimeout(() => { if (gameState) trapAction(); }, 500);
+            return;
+        }
+        const others = gameState.players.filter(p => p.id !== myId);
+        let hasAnimal = others.filter(p => p.hand.some(c => ['مرغ','خروس','روباه','مار'].includes(c)));
+        if (hasAnimal.length === 0) {
+            addLog('❌ هیچ بازیکنی کارت حیوانی ندارد!');
+            showBigMessage('❌ هیچ بازیکنی کارت حیوانی ندارد!', true);
+            return;
+        }
+        let btns = hasAnimal.map(p => ({
+            text: `${p.name} (${p.hand.filter(c => ['مرغ','خروس','روباه','مار'].includes(c)).length} کارت)`,
+            class: 'green',
+            action: () => {
+                closeModal();
+                let animals = p.hand.filter(c => ['مرغ','خروس','روباه','مار'].includes(c));
+                if (animals.length === 0) {
+                    addLog('❌ این بازیکن کارت حیوانی ندارد!');
+                    showModal('🎯 کارت ${p.name} را حذف کنی؟', [{ text: '❌ بازگشت', class: 'red', action: () => { closeModal(); } }]);
+                    return;
+                }
+                let animalBtns = animals.map(c => ({
+                    text: `${getIcon(c)} ${c}`,
+                    class: 'purple',
+                    action: () => {
+                        sendAction('trap', { target: p.id, card: c }, `کارت ${c} را از ${p.name} حذف کرد 🎯`);
+                        closeModal();
+                    }
+                }));
+                showModal(`🎯 کارت ${p.name} را حذف کنی؟`, animalBtns, 'یک کارت حیوانی از دست حریف حذف کن');
+            }
+        }));
+        showModal('🎯 به کدام بازیکن تله بزنی؟', btns, 'انتخاب کن تا تله رو بندازی');
+    }
+
+    function drawCard() {
+        soundDrawCard();
+        sendAction('draw', null, 'کارت کشید 🎴');
+    }
+
+    function discardCard() {
+        if (!selectedCard) {
+            addLog('❌ ابتدا یک کارت را انتخاب کنید!');
+            showBigMessage('❌ یک کارت انتخاب کن!', true);
+            return;
+        }
+        const card = selectedCard;
+        sendAction('discard', { card: card }, 'کارت ' + card + ' را باطل کرد 🗑️');
+        selectedCard = null;
+    }
+
+    function endTurnManually() {
+        sendAction('endTurn', null, 'نوبت را تمام کرد ⏹️');
+    }
+
+    // ===== اتصال دکمه‌ها با addEventListener (جلوگیری از چندباره) =====
+    // پاک کردن listenerهای قبلی با cloneNode و جایگزینی
+    document.addEventListener('pointerdown', function startMusicOnce() {
+        if (musicEnabled) startMusic();
+        document.removeEventListener('pointerdown', startMusicOnce);
+    }, { once: true });
+
+    function setupButtonListeners() {
+        // دکمه‌های اصلی با ID
+        const buttonMap = {
+            'createRoomBtn': createRoom,
+            'joinRoomBtn': joinRoom,
+            'enterLobbyBtn': enterLobby,
+            'lobbyBackBtn': backToJoinPanel,
+            'quickGameBtn': quickGame,
+            'startGameBtn': startGame,
+            'layBtn': layEgg,
+            'hatchBtn': hatch,
+            'foxBtn': foxAttack,
+            'snakeBtn': snakeAttack,
+            'trapBtn': trapAction,
+            'drawBtn': drawCard,
+            'discardBtn': discardCard,
+            'endTurnBtn': endTurnManually,
+            'bigMessageBtn': showCustomMessage,
+            'sendBtn': sendChat,
+            'editProfileBtn': openProfileEditor,
+            'soundToggleBtn': toggleSound,
+            'musicToggleBtn': toggleMusic,
+            'micToggleBtn': toggleMic,
+                    };
+        
+        Object.keys(buttonMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                // حذف listenerهای قبلی با cloneNode
+                const newEl = el.cloneNode(true);
+                el.parentNode.replaceChild(newEl, el);
+                // اتصال listener جدید
+                newEl.addEventListener('click', buttonMap[id]);
+            }
+        });
+        
+        // چت اینپوت
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            const newInput = chatInput.cloneNode(true);
+            chatInput.parentNode.replaceChild(newInput, chatInput);
+            newInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChat(); });
+        }
+    }
+
+    // اجرای setup بعد از بارگذاری صفحه
+    setTimeout(() => {
+        setupButtonListeners();
+        updateSoundBtn();
+    }, 100);
+
+    // ===== شروع =====
+    setTimeout(() => {
+        let w = document.getElementById('welcomeAnim');
+        if(w) w.style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'block';
+    }, 2800);
+
+    connectSocket();
+</script>
+
+<script>
+(function(){
+ function enhance(){
+  document.querySelectorAll('.card:not(.card-back)').forEach(function(c,i){
+   if(!c.dataset.ultra){
+    c.dataset.ultra='1';
+    c.style.setProperty('--r',(((i%7)-3)*1.2)+'deg');
+    c.addEventListener('mousemove',function(e){
+      const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
+      if(!c.classList.contains('selected')) c.style.transform=`perspective(500px) rotateX(${(-y*5).toFixed(1)}deg) rotateY(${(x*7).toFixed(1)}deg) translateY(-8px) scale(1.035)`;
+    });
+    c.addEventListener('mouseleave',function(){if(!c.classList.contains('selected'))c.style.transform='';});
+   }
+  });
+ }
+ document.addEventListener('DOMContentLoaded',enhance);
+ new MutationObserver(enhance).observe(document.body,{subtree:true,childList:true});
+})();
+</script>
+
+<script id="morgdoni-ultimate-js">
+(function(){
+ const q=s=>document.querySelector(s);
+ let camStream=null;
+
+ function emitIf(name,data){ try{ if(typeof socket!=="undefined" && socket) socket.emit(name,data); }catch(e){} }
+
+ const exitBtn=q('#exitGameBtn');
+ const rematchBtn=q('#newGameSameOpponentBtn');
+ const camBtn=q('#cameraBtn');
+ const camOff=q('#cameraOffBtn');
+ const camPanel=q('#cameraPanel');
+ const camVideo=q('#cameraVideo');
+
+ if(exitBtn) exitBtn.onclick=function(){
+   if(confirm('از بازی خارج شوی؟')){
+     try{ if(typeof leaveGame==="function") leaveGame(); }catch(e){}
+     try{ if(typeof socket!=="undefined"&&socket&&typeof roomId!=="undefined") socket.emit('leaveGame',{roomId}); }catch(e){}
+     const gp=q('#gamePanel'),lp=q('#lobbyPanel'),jp=q('#joinPanel');
+     if(gp) gp.style.display='none';
+     if(lp) lp.style.display='';
+     if(jp) jp.style.display='';
+   }
+ };
+
+ if(rematchBtn) rematchBtn.onclick=function(){
+   try{
+     if(typeof gameState!=="undefined" && gameState && gameState.players){
+       const other=gameState.players.find(p=>typeof myId!=="undefined"&&p.id!==myId);
+       if(other) emitIf('rematchRequest',{roomId:typeof roomId!=='undefined'?roomId:null,targetId:other.id});
+     }
+     if(typeof addLog==="function") addLog('🔁 درخواست بازی جدید با همین حریف ارسال شد');
+   }catch(e){ console.warn(e); }
+ };
+
+ async function openCam(){
+   if(!roomId || !otherPlayerId){ alert('ابتدا وارد یک بازی دو نفره شو.'); return; }
+   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+     alert('مرورگر اجازه دسترسی به دوربین را در این آدرس نمی‌دهد.'); return;
+   }
+   try{
+     cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+     camVideo.srcObject=cameraStream; camPanel.style.display='block';
+     const pc=ensurePeerConnection();
+     const track=cameraStream.getVideoTracks()[0];
+     const sender=pc.getSenders().find(s=>s.track && s.track.kind==='video');
+     if(sender) await sender.replaceTrack(track); else pc.addTrack(track,cameraStream);
+     cameraOn=true; camBtn.style.display='none'; camOff.style.display='';
+     if(otherPlayerId && socket){
+       makingOffer=true;
+       await pc.setLocalDescription(await pc.createOffer());
+       socket.emit('webrtc-offer',{to:otherPlayerId,offer:pc.localDescription});
+       makingOffer=false;
+     }
+   }catch(e){ console.error(e); alert('اجازه دوربین داده نشد.'); }
+ }
+ function closeCam(){
+   if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
+   cameraOn=false;
+   camVideo.srcObject=null;camPanel.style.display='none';
+   const rv=document.getElementById('remoteVideo'); if(rv){rv.srcObject=null;rv.style.display='none';} const rmb=document.getElementById('remoteMediaBox'); if(rmb) rmb.style.display='none';
+   camBtn.style.display='';camOff.style.display='none';
+ }
+ if(camBtn) camBtn.onclick=openCam;
+ if(camOff) camOff.onclick=closeCam;
+ window.addEventListener('beforeunload',closeCam);
+})();
+</script>
+
+<script id="morgdoni-media-controls">
+document.addEventListener('DOMContentLoaded', function(){
+ const fi=document.getElementById('chatFileInput');
+ if(fi) fi.addEventListener('change',function(){ if(this.files[0]) sendFileToChat(this.files[0]); this.value=''; });
+});
+</script>
+</body>
+</html>

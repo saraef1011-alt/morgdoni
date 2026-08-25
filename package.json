@@ -1,0 +1,17 @@
+{
+  "name": "marg-doni",
+  "version": "1.0.0",
+  "description": "بازی مرغ دونی آنلاین",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "udp-call": "^0.0.2"
+  }
+}
