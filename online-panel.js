@@ -1,0 +1,22 @@
+(()=>{
+'use strict';
+let players=[];
+let panel=null;
+function socket(){return window.__MORG_SOCKET__||window.socket||null}
+function myId(){const s=socket();return String(window.myId||s?.id||'')}
+function request(id,btn){const s=socket();if(!s||!id||String(id)===myId())return;s.emit('requestGame',{targetId:String(id)});btn.disabled=true;btn.textContent='📨 ارسال شد';setTimeout(()=>{if(btn.isConnected){btn.disabled=false;btn.textContent='🎮 درخواست بازی'}},1500)}
+function build(){
+ if(panel)return;
+ panel=document.createElement('div');panel.id='morg-online-panel';
+ panel.innerHTML='<div id="mop-head"><b>👥 بازیکنان آنلاین</b><button id="mop-close" type="button">×</button></div><div id="mop-count"></div><div id="mop-list"></div>';
+ document.body.appendChild(panel);
+ const st=document.createElement('style');st.textContent=`#morg-online-panel{position:fixed;top:90px;right:25px;width:310px;max-width:calc(100vw - 30px);background:#fff8e8;border:3px solid #d47a2a;border-radius:22px;box-shadow:0 12px 35px #0008;z-index:999999;direction:rtl;font-family:Tahoma,Arial,sans-serif;overflow:hidden}#mop-head{cursor:move;background:linear-gradient(135deg,#6d351f,#3b2118);color:#ffe6a6;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;font-size:17px}#mop-close{width:32px;height:32px;border:0;border-radius:50%;background:#c0392b;color:white;font-size:24px;line-height:25px;cursor:pointer}#mop-count{padding:8px 14px;color:#76502d;font-weight:bold;border-bottom:1px solid #e5c99a}#mop-list{max-height:55vh;overflow:auto;padding:9px}.mop-row{display:flex;align-items:center;gap:8px;padding:9px;margin-bottom:7px;background:#fff;border:1px solid #efb45c;border-radius:14px}.mop-info{flex:1;min-width:0}.mop-name{font-weight:800;color:#55301d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mop-status{font-size:11px;color:#777;margin-top:3px}.mop-btn{border:0;border-radius:10px;padding:8px 9px;background:#16a34a;color:#fff;font-weight:800;cursor:pointer;white-space:nowrap}.mop-btn:disabled{opacity:.65}.mop-empty{text-align:center;padding:20px;color:#888}@media(max-width:600px){#morg-online-panel{right:10px;top:70px;width:280px}}`;
+ document.head.appendChild(st);
+ document.getElementById('mop-close').onclick=()=>{panel.style.display='none'};
+ drag(panel,document.getElementById('mop-head'));
+}
+function render(){build();panel.style.display='block';const me=myId();const list=players.filter(p=>p?.id&&String(p.id)!==me);document.getElementById('mop-count').textContent=list.length+' بازیکن آنلاین';const box=document.getElementById('mop-list');box.innerHTML='';if(!list.length){box.innerHTML='<div class="mop-empty">بازیکن دیگری آنلاین نیست</div>';return}list.forEach(p=>{const row=document.createElement('div');row.className='mop-row';const info=document.createElement('div');info.className='mop-info';const name=document.createElement('div');name.className='mop-name';name.textContent=(p.avatar||'🐔')+' '+(p.name||'بازیکن');const status=document.createElement('div');status.className='mop-status';status.textContent=p.status==='playing'?'🎮 در حال بازی':p.status==='room'?'🏠 داخل اتاق':p.status==='ready'?'🟢 آماده':'🟢 آنلاین';info.append(name,status);const b=document.createElement('button');b.className='mop-btn';b.textContent='🎮 درخواست بازی';b.onclick=()=>request(p.id,b);row.append(info,b);box.appendChild(row)})}
+function hook(){const s=socket();if(!s)return;if(!s.__morgOnlinePanel){s.__morgOnlinePanel=true;s.on('playerListUpdate',l=>{players=Array.isArray(l)?l:[];render()});s.on('connect',()=>{window.myId=s.id;render()})}render()}
+function drag(el,handle){let down=false,sx=0,sy=0,ox=0,oy=0;const start=(x,y)=>{down=true;const r=el.getBoundingClientRect();ox=r.left;oy=r.top;sx=x;sy=y;el.style.right='auto';el.style.bottom='auto';el.style.left=ox+'px';el.style.top=oy+'px'};const move=(x,y)=>{if(!down)return;el.style.left=Math.max(5,Math.min(innerWidth-el.offsetWidth-5,ox+x-sx))+'px';el.style.top=Math.max(5,Math.min(innerHeight-el.offsetHeight-5,oy+y-sy))+'px'};const end=()=>down=false;handle.addEventListener('mousedown',e=>start(e.clientX,e.clientY));document.addEventListener('mousemove',e=>move(e.clientX,e.clientY));document.addEventListener('mouseup',end);handle.addEventListener('touchstart',e=>{const t=e.touches[0];start(t.clientX,t.clientY)},{passive:true});document.addEventListener('touchmove',e=>{if(down){const t=e.touches[0];move(t.clientX,t.clientY)}},{passive:true});document.addEventListener('touchend',end)}
+setInterval(hook,500);hook();
+})();

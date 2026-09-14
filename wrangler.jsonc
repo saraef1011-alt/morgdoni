@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "morgdoni5",
+  "main": "worker-multi.js",
+  "compatibility_date": "2026-08-29",
+  "assets": {"directory":".","binding":"ASSETS"},
+  "durable_objects": {"bindings":[{"name":"GAME_ROOM","class_name":"GameRoom"}]},
+  "migrations": [{"tag":"v1","new_sqlite_classes":["GameRoom"]}]
+}

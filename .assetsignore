@@ -1,0 +1,11 @@
+.git
+.git/**
+.wrangler
+.wrangler/**
+wrangler.jsonc
+game-server.js
+README.md
+package.json
+package-lock.json
+node_modules
+node_modules/**
