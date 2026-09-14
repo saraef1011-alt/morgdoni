@@ -1,5 +1,5 @@
 name = "morgdoni5"
-main = "worker-multi.js"
+main = "worker-entry.js"
 compatibility_date = "2026-08-29"
 
 [assets]
