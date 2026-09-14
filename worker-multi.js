@@ -60,6 +60,19 @@ export class GameRoom extends BaseGameRoom {
 
     return super.message(id, raw);
   }
+
+  // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
+  async finish(r) {
+    await super.finish(r);
+    const ids = (r?.players || []).map(p => p.id).filter(Boolean);
+    for (const id of ids) {
+      delete this.data.online[id];
+      delete this.data.pending[id];
+      this.data.queue = (this.data.queue || []).filter(x => x !== id);
+    }
+    this.updateList();
+    await this.save();
+  }
 }
 
 const SOCKET_SHIM = `class MorgdoniSocket{constructor(){this.events={};this.id=null;this.queue=[];const p=location.protocol==='https:'?'wss:':'ws:';this.ws=new WebSocket(p+'//'+location.host+'/ws');this.ws.onopen=()=>{this.emitLocal('connect');for(const m of this.queue)this.ws.send(m);this.queue=[]};this.ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m?.type){if(m.type==='hello'&&m.data?.id)this.id=m.data.id;this.emitLocal(m.type,m.data)}}catch(x){console.error(x)}};this.ws.onclose=()=>this.emitLocal('disconnect');this.ws.onerror=e=>this.emitLocal('connect_error',e)}on(e,c){(this.events[e]??=[]).push(c);return this}once(e,c){const f=d=>{this.off(e,f);c(d)};return this.on(e,f)}off(e,c){this.events[e]=(this.events[e]||[]).filter(x=>x!==c);return this}emit(e,d){const m=JSON.stringify({type:e,data:d??null});if(this.ws.readyState===1)this.ws.send(m);else this.queue.push(m);return this}emitLocal(e,d){for(const c of this.events[e]||[])try{c(d)}catch(x){console.error(x)}}disconnect(){this.ws?.close()}}window.io=window.io||function(){const s=new MorgdoniSocket();window.__MORG_SOCKET__=s;return s};`;
