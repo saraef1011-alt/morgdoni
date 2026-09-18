@@ -717,6 +717,32 @@ input,.chat-input{
         document.head.appendChild(style);
     })();
 
+    let vsFileMusic = null;
+
+    function startVSFileMusic() {
+        try {
+            if (!vsFileMusic) {
+                vsFileMusic = new Audio('/assets/vs-music/vs.mp3');
+                vsFileMusic.preload = 'auto';
+                vsFileMusic.volume = 0.9;
+            }
+            vsFileMusic.currentTime = 0;
+            const p = vsFileMusic.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch (e) {
+            console.warn('VS music unavailable', e);
+        }
+    }
+
+    function stopVSFileMusic() {
+        try {
+            if (vsFileMusic) {
+                vsFileMusic.pause();
+                vsFileMusic.currentTime = 0;
+            }
+        } catch (e) {}
+    }
+
     function showMorgdoniVS(players) {
         const old=document.getElementById('morgdoniVsOverlay'); if(old) old.remove();
         const list=Array.isArray(players)?players.slice(0,2):[];
@@ -739,6 +765,8 @@ input,.chat-input{
         document.body.appendChild(ov);
     }
     function finishMorgdoniVS(){
+        window.morgdoniVsActive = false;
+        stopVSFileMusic();
         const ov=document.getElementById('morgdoniVsOverlay');
         if(ov) ov.remove();
         const gp=document.getElementById('gamePanel');
@@ -995,6 +1023,15 @@ input,.chat-input{
             
             socket.on('gameState', (state) => {
                 gameState = state;
+                // اگر مسابقه شروع شده، هیچ رویداد دیگری نباید صفحه خوش‌آمد را برگرداند.
+                if (window.morgdoniGameStarted) {
+                    const w = document.getElementById('welcomeAnim');
+                    const gc = document.getElementById('gameContainer');
+                    const gp = document.getElementById('gamePanel');
+                    if (w) w.style.display = 'none';
+                    if (gc) gc.style.display = 'flex';
+                    if (gp) gp.style.display = 'block';
+                }
                 const otherP = state.players.find(p => p.id !== myId);
                 if (otherP) otherPlayerId = otherP.id;
                 renderGame(state);
@@ -1143,18 +1180,13 @@ input,.chat-input{
                 updateStatus('⚔️ VS');
                 addLog(`⚔️ نبرد بین ${(data.players || []).map(p => p.name).join(' و ')} آماده شد`);
                 showMorgdoniVS(data.players);
+                startVSFileMusic();
 
-                // The server also sends gameState. Keep the actual game visible after VS.
+                // VS فقط یک لایه موقت است؛ به محض رسیدن gameState وارد خود بازی می‌شویم.
+                window.morgdoniVsActive = true;
                 setTimeout(() => {
+                    if (!window.morgdoniVsActive) return;
                     finishMorgdoniVS();
-                    if (welcome) welcome.style.display = 'none';
-                    if (container) container.style.display = 'flex';
-                    if (lobby) lobby.style.display = 'none';
-                    if (join) join.style.display = 'none';
-                    if (game) game.style.display = 'block';
-
-                    updateStatus('🎮 بازی شروع شد!');
-                    addLog(`🎮 بازی در اتاق ${roomId} شروع شد`);
                 }, 3500);
             });
 
@@ -1963,9 +1995,9 @@ input,.chat-input{
     }, 100);
 
     // ===== شروع =====
-    // صفحه خوش‌آمد فقط هنگام ورود اولیه نمایش داده می‌شود.
-    // اگر مسابقه شروع شده باشد، این تایمر نباید دوباره آن را برگرداند.
+    // وضعیت ورود به بازی؛ این دو فلگ جلوی برگشت ناخواسته به صفحه خوش‌آمد را می‌گیرند.
     window.morgdoniGameStarted = false;
+    window.morgdoniVsActive = false;
     setTimeout(() => {
         if (window.morgdoniGameStarted) return;
         let w = document.getElementById('welcomeAnim');
