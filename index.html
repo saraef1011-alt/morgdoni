@@ -722,18 +722,28 @@ input,.chat-input{
     function startVSFileMusic() {
         try {
             if (!vsFileMusic) {
-                vsFileMusic = new Audio('/assets/vs-music/vs.mp3');
+                vsFileMusic = document.createElement('audio');
+                vsFileMusic.id = 'morgdoniVsAudio';
+                vsFileMusic.src = '/assets/vs-music/vs.mp3?vs=2';
                 vsFileMusic.preload = 'auto';
                 vsFileMusic.volume = 0.9;
+                vsFileMusic.setAttribute('playsinline', '');
+                vsFileMusic.setAttribute('webkit-playsinline', '');
+                document.body.appendChild(vsFileMusic);
             }
+            vsFileMusic.load();
             vsFileMusic.currentTime = 0;
             const p = vsFileMusic.play();
             if (p && typeof p.catch === 'function') {
-                p.catch(() => { startMusic(); });
+                p.catch((err) => {
+                    console.warn('VS MP3 play failed:', err);
+                    try { musicEnabled = true; startMusic(); } catch(e) {}
+                });
             }
-
+            try { musicEnabled = true; startMusic(); } catch(e) {}
         } catch (e) {
             console.warn('VS music unavailable', e);
+            try { musicEnabled = true; startMusic(); } catch(err) {}
         }
     }
 
@@ -767,6 +777,20 @@ input,.chat-input{
           +'</div><div style="margin-top:24px;color:#ffe39a;font-size:14px">نبرد در حال آماده‌سازی است…</div></div>';
         document.body.appendChild(ov);
     }
+    function forceMorgdoniGameView() {
+        window.morgdoniGameStarted = true;
+        const w=document.getElementById('welcomeAnim');
+        const gc=document.getElementById('gameContainer');
+        const gp=document.getElementById('gamePanel');
+        const lp=document.getElementById('lobbyPanel');
+        const jp=document.getElementById('joinPanel');
+        if(w){w.style.display='none';w.style.visibility='hidden';}
+        if(gc){gc.style.display='flex';gc.style.visibility='visible';gc.style.opacity='1';}
+        if(lp)lp.style.display='none';
+        if(jp)jp.style.display='none';
+        if(gp){gp.style.display='block';gp.style.visibility='visible';gp.style.opacity='1';}
+    }
+
     function finishMorgdoniVS(){
         window.morgdoniVsActive = false;
         stopVSFileMusic();
@@ -1031,12 +1055,7 @@ input,.chat-input{
                     window.morgdoniGameStarted = true;
                     window.morgdoniVsActive = false;
                     finishMorgdoniVS();
-                    const w = document.getElementById('welcomeAnim');
-                    const gc = document.getElementById('gameContainer');
-                    const gp = document.getElementById('gamePanel');
-                    if (w) w.style.display = 'none';
-                    if (gc) gc.style.display = 'flex';
-                    if (gp) gp.style.display = 'block';
+                    forceMorgdoniGameView();
                 }
                 const otherP = state.players.find(p => p.id !== myId);
                 if (otherP) otherPlayerId = otherP.id;
@@ -1159,6 +1178,7 @@ input,.chat-input{
                 const actions = document.getElementById('actionsPanel');
                 const startBtn = document.getElementById('startGameBtn');
 
+                forceMorgdoniGameView();
                 if (welcome) welcome.style.display = 'none';
                 if (container) container.style.display = 'flex';
                 if (lobby) lobby.style.display = 'none';
@@ -1191,9 +1211,13 @@ input,.chat-input{
                 // VS فقط یک لایه موقت است؛ به محض رسیدن gameState وارد خود بازی می‌شویم.
                 window.morgdoniVsActive = true;
                 setTimeout(() => {
-                    if (!window.morgdoniVsActive) return;
-                    finishMorgdoniVS();
-                }, 3500);
+                    forceMorgdoniGameView();
+                    window.morgdoniVsActive = false;
+                    stopVSFileMusic();
+                    const ov=document.getElementById('morgdoniVsOverlay');
+                    if(ov) ov.remove();
+                    if(socket && roomId) socket.emit('getGameState',{roomId});
+                }, 3000);
             });
 
             socket.on('webrtc-offer', handleIncomingOffer);
@@ -1632,7 +1656,6 @@ input,.chat-input{
             soundConfirm();
             // شروع صدا از داخل کلیک کاربر تا محدودیت autoplay مرورگر مانع پخش نشود.
             startVSFileMusic();
-            startMusic();
             socket.emit('acceptGame', { fromId: data.fromId });
             closeModal();
         });
