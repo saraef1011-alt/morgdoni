@@ -1104,11 +1104,16 @@ function forceMorgdoniGameView() {
             });
             
             socket.on('roomUpdate', (room) => {
-                // roomUpdate ممکن است بعد از gameStarted برسد؛ اگر اتاق شروع شده است، لابی هرگز نباید برگردد.
-                if (room && room.gameStarted) {
+                if (!room) return;
+                const matchStarted = !!room.gameStarted;
+                if (matchStarted) {
+                    // مهم: renderRoom بعد از force می‌توانست دوباره join/lobby را باز کند.
+                    // وقتی بازی شروع شده، اصلاً renderRoom اجرا نمی‌شود.
                     window.morgdoniGameStarted = true;
                     document.body.classList.add('morgdoni-in-game');
                     forceMorgdoniGameView();
+                    document.getElementById('startGameBtn')?.style.setProperty('display','none','important');
+                    return;
                 }
                 renderRoom(room);
                 const me = room.players.find(p => p.id === myId);
