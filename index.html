@@ -728,7 +728,10 @@ input,.chat-input{
             }
             vsFileMusic.currentTime = 0;
             const p = vsFileMusic.play();
-            if (p && typeof p.catch === 'function') p.catch(() => {});
+            if (p && typeof p.catch === 'function') {
+                p.catch(() => { startMusic(); });
+            }
+
         } catch (e) {
             console.warn('VS music unavailable', e);
         }
@@ -1024,7 +1027,10 @@ input,.chat-input{
             socket.on('gameState', (state) => {
                 gameState = state;
                 // اگر مسابقه شروع شده، هیچ رویداد دیگری نباید صفحه خوش‌آمد را برگرداند.
-                if (window.morgdoniGameStarted) {
+                if (window.morgdoniGameStarted || state.gameStarted) {
+                    window.morgdoniGameStarted = true;
+                    window.morgdoniVsActive = false;
+                    finishMorgdoniVS();
                     const w = document.getElementById('welcomeAnim');
                     const gc = document.getElementById('gameContainer');
                     const gp = document.getElementById('gamePanel');
@@ -1624,6 +1630,9 @@ input,.chat-input{
 
         overlay.querySelector('#acceptGameBtn').addEventListener('click', () => {
             soundConfirm();
+            // شروع صدا از داخل کلیک کاربر تا محدودیت autoplay مرورگر مانع پخش نشود.
+            startVSFileMusic();
+            startMusic();
             socket.emit('acceptGame', { fromId: data.fromId });
             closeModal();
         });
