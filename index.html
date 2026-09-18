@@ -472,11 +472,8 @@ input,.chat-input{
 </div>
 
 <script>
-    // ===== انیمیشن ورود =====
-    setTimeout(() => { let w = document.getElementById('welcomeAnim');
-        if(w) w.style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'flex';
-    }, 5000);
+    // انیمیشن ورود فقط در ابتدای باز شدن صفحه اجرا می‌شود.
+    // تایمر قدیمی حذف شد چون ممکن بود بعد از VS دوباره نمای اصلی را روی بازی بیندازد.
 
     // ===== صدا =====
     function playClick() {
@@ -796,10 +793,8 @@ input,.chat-input{
         stopVSFileMusic();
         const ov=document.getElementById('morgdoniVsOverlay');
         if(ov) ov.remove();
-        const gp=document.getElementById('gamePanel');
-        if(gp) gp.style.display='block';
-        const lp=document.getElementById('lobbyPanel'); if(lp) lp.style.display='none';
-        const jp=document.getElementById('joinPanel'); if(jp) jp.style.display='none';
+        // پایان VS باید همیشه مستقیماً وارد خود بازی شود.
+        forceMorgdoniGameView();
     }
 
     // ===== بازی آنلاین =====
