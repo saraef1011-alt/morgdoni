@@ -341,6 +341,16 @@ input,.chat-input{
 #liveOnlineOpen{position:fixed;z-index:99998;right:14px;top:90px;border:2px solid #d99b4a;border-radius:14px;background:#6b3e20;color:#fff;padding:10px 14px;font-weight:800;box-shadow:0 7px 20px rgba(0,0,0,.35);cursor:pointer}
 @media(max-width:600px){#liveOnlinePanel{top:70px;right:8px;width:290px;max-height:68vh}.live-online-head{padding:9px 10px}#liveOnlineOpen{top:70px;right:8px}}
 </style>
+<style id="morgdoni-game-lock">
+/* وقتی بازی شروع شد، این قوانین CSS از هر اسکریپت لابی قوی‌تر هستند. */
+body.morgdoni-in-game #welcomeAnim{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+body.morgdoni-in-game #gameContainer{display:flex!important;visibility:visible!important;opacity:1!important}
+body.morgdoni-in-game #joinPanel,
+body.morgdoni-in-game #lobbyPanel,
+body.morgdoni-in-game #liveOnlinePanel,
+body.morgdoni-in-game #liveOnlineOpen{display:none!important}
+body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!important;opacity:1!important}
+</style>
 <script src="/morgdoni-card-fix.js"></script>
 </head>
 <body>
@@ -1094,6 +1104,12 @@ function forceMorgdoniGameView() {
             });
             
             socket.on('roomUpdate', (room) => {
+                // roomUpdate ممکن است بعد از gameStarted برسد؛ اگر اتاق شروع شده است، لابی هرگز نباید برگردد.
+                if (room && room.gameStarted) {
+                    window.morgdoniGameStarted = true;
+                    document.body.classList.add('morgdoni-in-game');
+                    forceMorgdoniGameView();
+                }
                 renderRoom(room);
                 const me = room.players.find(p => p.id === myId);
                 if (me && room.host === myId && room.players.length >= 2) {
@@ -1157,6 +1173,11 @@ function forceMorgdoniGameView() {
 
             socket.on('playerListUpdate', (list) => {
                 renderLobby(list);
+                // لیست آنلاین نباید بعد از شروع مسابقه نمای لابی را پس بگیرد.
+                if (window.morgdoniGameStarted) {
+                    document.body.classList.add('morgdoni-in-game');
+                    forceMorgdoniGameView();
+                }
             });
 
             // ===== پروفایل =====
