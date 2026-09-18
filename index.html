@@ -1217,6 +1217,21 @@ input,.chat-input{
 
                 updateStatus('⚔️ VS');
                 addLog(`⚔️ نبرد بین ${(data.players || []).map(p => p.name).join(' و ')} آماده شد`);
+                // وضعیت کامل اولیه را همان لحظه از gameStarted هم دریافت می‌کنیم؛
+                // بنابراین حتی اگر gameState پیام بعدی با تأخیر برسد، بازی کارت و نوبت دارد.
+                if (data.state && Array.isArray(data.state.players)) {
+                    gameState = data.state;
+                    renderGame(gameState);
+                    const me = gameState.players.find(p => p.id === myId);
+                    const actions = document.getElementById('actionsPanel');
+                    if (actions) actions.style.display = (me && gameState.currentTurn === myId && !gameState.winner) ? 'block' : 'none';
+                    if (me && gameState.currentTurn === myId && !gameState.winner) {
+                        updateStatus(`🎯 نوبت شما - ${me.hand.length} کارت`);
+                    } else {
+                        const current = gameState.players.find(p => p.id === gameState.currentTurn);
+                        updateStatus(`🎯 نوبت: ${current ? current.name : '...'}`);
+                    }
+                }
                 showMorgdoniVS(data.players);
                 startVSFileMusic();
                 // حتی اگر یک اسکریپت دیگر صفحه را تغییر دهد، این وضعیت را ذخیره کرده‌ایم.
@@ -1930,6 +1945,16 @@ input,.chat-input{
             setTimeout(() => { if (gameState) trapAction(); }, 500);
             return;
         }
+
+        // تله فقط وقتی مجاز است که واقعاً کارت «تله» در دست خودمان باشد.
+        // بدون این کارت نباید دست حریف اصلاً برای انتخاب نمایش داده شود.
+        const me = gameState.players.find(p => p.id === myId);
+        if (!me || !me.hand.includes('تله')) {
+            addLog('❌ کارت تله نداری!');
+            showBigMessage('❌ کارت تله نداری!', true);
+            return;
+        }
+
         const others = gameState.players.filter(p => p.id !== myId);
         let hasAnimal = others.filter(p => p.hand.some(c => ['مرغ','خروس','روباه','مار'].includes(c)));
         if (hasAnimal.length === 0) {
