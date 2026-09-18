@@ -1009,10 +1009,20 @@ input,.chat-input{
             
             socket.on('connect', () => { 
                 myId = socket.id; 
+                window.myId = myId;
                 updateStatus('✅ متصل به سرور');
                 document.getElementById('roomStatus').innerHTML = '✅ متصل به سرور';
                 addLog('✅ به سرور متصل شدی!');
                 socket.emit('loadProfile', { accountId: myAccountId });
+
+                // اگر مرورگر در لحظه شروع بازی رفرش/ناوبری کرده باشد، بازی را دوباره باز کن.
+                const savedRoom = localStorage.getItem('md_activeRoom');
+                if (savedRoom) {
+                    roomId = savedRoom;
+                    window.morgdoniGameStarted = true;
+                    forceMorgdoniGameView();
+                    setTimeout(() => socket.emit('getGameState', { roomId: savedRoom }), 100);
+                }
             });
             
             socket.on('connect_error', () => {
@@ -1075,6 +1085,7 @@ input,.chat-input{
                     }
                 }
                 if (state.winner) {
+                    localStorage.removeItem('md_activeRoom');
                     const winner = state.players.find(p => p.id === state.winner);
                     showBigMessage(`🏆 برنده: ${winner ? winner.name : '...'} 🏆`);
                 }
@@ -1193,6 +1204,7 @@ input,.chat-input{
                 if (lo) lo.style.display = 'none';
 
                 roomId = data.roomId;
+                localStorage.setItem('md_activeRoom', String(roomId));
 
                 const top = document.getElementById('roomCodeTop');
                 const roomSpan = document.getElementById('roomCodeSpan');
@@ -1207,6 +1219,8 @@ input,.chat-input{
                 addLog(`⚔️ نبرد بین ${(data.players || []).map(p => p.name).join(' و ')} آماده شد`);
                 showMorgdoniVS(data.players);
                 startVSFileMusic();
+                // حتی اگر یک اسکریپت دیگر صفحه را تغییر دهد، این وضعیت را ذخیره کرده‌ایم.
+                localStorage.setItem('md_activeRoom', String(roomId));
 
                 // VS فقط یک لایه موقت است؛ به محض رسیدن gameState وارد خود بازی می‌شویم.
                 window.morgdoniVsActive = true;
