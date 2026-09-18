@@ -774,7 +774,21 @@ input,.chat-input{
           +'</div><div style="margin-top:24px;color:#ffe39a;font-size:14px">نبرد در حال آماده‌سازی است…</div></div>';
         document.body.appendChild(ov);
     }
-    function forceMorgdoniGameView() {
+    function protectMorgdoniGameView(){
+    if(!window.morgdoniGameStarted) return;
+    const w=document.getElementById('welcomeAnim');
+    const gc=document.getElementById('gameContainer');
+    const gp=document.getElementById('gamePanel');
+    const lp=document.getElementById('lobbyPanel');
+    const jp=document.getElementById('joinPanel');
+    if(w){w.style.display='none';w.style.visibility='hidden';w.style.opacity='0';}
+    if(gc){gc.style.display='flex';gc.style.visibility='visible';gc.style.opacity='1';}
+    if(lp)lp.style.display='none';
+    if(jp)jp.style.display='none';
+    if(gp){gp.style.display='block';gp.style.visibility='visible';gp.style.opacity='1';}
+}
+
+function forceMorgdoniGameView() {
         window.morgdoniGameStarted = true;
         const w=document.getElementById('welcomeAnim');
         const gc=document.getElementById('gameContainer');
