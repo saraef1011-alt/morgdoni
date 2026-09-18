@@ -789,17 +789,26 @@ input,.chat-input{
 }
 
 function forceMorgdoniGameView() {
+        // بعد از شروع بازی، هیچ اسکریپت/رویداد دیگری حق ندارد ما را به لابی یا صفحه شروع برگرداند.
         window.morgdoniGameStarted = true;
         const w=document.getElementById('welcomeAnim');
         const gc=document.getElementById('gameContainer');
         const gp=document.getElementById('gamePanel');
         const lp=document.getElementById('lobbyPanel');
         const jp=document.getElementById('joinPanel');
-        if(w){w.style.display='none';w.style.visibility='hidden';}
-        if(gc){gc.style.display='flex';gc.style.visibility='visible';gc.style.opacity='1';}
-        if(lp)lp.style.display='none';
-        if(jp)jp.style.display='none';
-        if(gp){gp.style.display='block';gp.style.visibility='visible';gp.style.opacity='1';}
+        if(w) w.remove();
+        if(gc){
+            gc.style.setProperty('display','flex','important');
+            gc.style.setProperty('visibility','visible','important');
+            gc.style.setProperty('opacity','1','important');
+        }
+        if(lp) lp.style.setProperty('display','none','important');
+        if(jp) jp.style.setProperty('display','none','important');
+        if(gp){
+            gp.style.setProperty('display','block','important');
+            gp.style.setProperty('visibility','visible','important');
+            gp.style.setProperty('opacity','1','important');
+        }
     }
 
     function finishMorgdoniVS(){
@@ -810,6 +819,40 @@ function forceMorgdoniGameView() {
         // پایان VS باید همیشه مستقیماً وارد خود بازی شود.
         forceMorgdoniGameView();
     }
+
+    // محافظ دائمی بعد از شروع مسابقه؛ لابی و صفحه خوش‌آمد دیگر نمی‌توانند برگردند.
+    (function installMorgdoniGameGuard(){
+        const protect=()=>{
+            if(!window.morgdoniGameStarted) return;
+            const w=document.getElementById('welcomeAnim');
+            if(w) w.remove();
+            const gc=document.getElementById('gameContainer');
+            const gp=document.getElementById('gamePanel');
+            const lp=document.getElementById('lobbyPanel');
+            const jp=document.getElementById('joinPanel');
+            if(gc){
+                gc.style.setProperty('display','flex','important');
+                gc.style.setProperty('visibility','visible','important');
+                gc.style.setProperty('opacity','1','important');
+            }
+            if(lp) lp.style.setProperty('display','none','important');
+            if(jp) jp.style.setProperty('display','none','important');
+            if(gp){
+                gp.style.setProperty('display','block','important');
+                gp.style.setProperty('visibility','visible','important');
+                gp.style.setProperty('opacity','1','important');
+            }
+        };
+        const start=()=>{
+            protect();
+            const obs=new MutationObserver(protect);
+            if(document.documentElement) obs.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']});
+            setInterval(protect,100);
+        };
+        if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+        else start();
+    })();
+
 
     // ===== بازی آنلاین =====
     let socket = null;
