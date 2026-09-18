@@ -24,6 +24,8 @@ function install(s){if(!s||socket===s)return;socket=s;
  s.on('gameRequest',d=>{if(d){incoming.push({...d,_key:String(d.fromId||d.fromName||Date.now())});render();setLobbyBadge()}});
  s.on('busyGameChoice',d=>showBusyChoice(d));
  s.on('gameRejected',()=>render());
+ s.on('gameStarted',()=>{ closeLobby(); document.getElementById('morgBusyGameChoice')?.remove(); });
+ s.on('gameState',d=>{ if(d?.gameStarted) { closeLobby(); document.getElementById('morgBusyGameChoice')?.remove(); } });
  s.on('gameRequestSent',d=>{if(d)console.log('درخواست بازی ارسال شد به',d.targetName||d.targetId);render()});
  s.on('gameRequestError',d=>{console.warn(d);alert(d||'ارسال درخواست بازی ناموفق بود');render()});
  s.on('gameError',d=>{console.warn(d);alert(d||'خطای بازی')});
