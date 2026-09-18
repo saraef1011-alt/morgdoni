@@ -709,19 +709,13 @@ input,.chat-input{
         showModal('📢 استیکر', btns);
     }
 
-    <style id="morgdoni-vs-style">
-        #morgdoniVsOverlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(255,210,90,.14),transparent 25%),linear-gradient(135deg,#120d09,#24150d 45%,#0b0806);color:#fff}
-        #morgdoniVsOverlay .vs-box{width:min(1100px,96vw);text-align:center}
-        #morgdoniVsOverlay .vs-title{font-size:clamp(22px,4vw,40px);font-weight:900;margin-bottom:24px}
-        #morgdoniVsOverlay .vs-players{display:flex;align-items:center;justify-content:center;gap:clamp(10px,5vw,70px)}
-        #morgdoniVsOverlay .vs-card{width:min(330px,38vw);min-height:300px;padding:22px 18px;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:2px solid rgba(255,255,255,.25);box-shadow:0 20px 60px rgba(0,0,0,.55)}
-        #morgdoniVsOverlay .vs-avatar{width:clamp(105px,16vw,155px);height:clamp(105px,16vw,155px);margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:70px;background:radial-gradient(circle,#fff3b0,#d68b21 70%);border:6px solid rgba(255,255,255,.8);overflow:hidden}
-        #morgdoniVsOverlay .vs-avatar img{width:100%;height:100%;object-fit:cover}
-        #morgdoniVsOverlay .vs-name{font-size:clamp(20px,3vw,30px);font-weight:900}
-        #morgdoniVsOverlay .vs-stats{margin-top:12px;color:#ffe39a}
-        #morgdoniVsOverlay .vs-mark{font-size:clamp(55px,10vw,105px);font-weight:1000;font-style:italic;color:#ffe082;text-shadow:0 5px 0 #7b3500,0 0 35px #ff9f1c}
-        @media(max-width:650px){#morgdoniVsOverlay .vs-card{width:40vw;min-height:250px;padding:13px 8px}#morgdoniVsOverlay .vs-players{gap:5px}}
-    </style>
+    // VS overlay styles must be injected from JavaScript (this code is already inside a <script> block).
+    (function(){
+        const style=document.createElement('style');
+        style.id='morgdoni-vs-style';
+        style.textContent="#morgdoniVsOverlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(255,210,90,.14),transparent 25%),linear-gradient(135deg,#120d09,#24150d 45%,#0b0806);color:#fff}\n        #morgdoniVsOverlay .vs-box{width:min(1100px,96vw);text-align:center}\n        #morgdoniVsOverlay .vs-title{font-size:clamp(22px,4vw,40px);font-weight:900;margin-bottom:24px}\n        #morgdoniVsOverlay .vs-players{display:flex;align-items:center;justify-content:center;gap:clamp(10px,5vw,70px)}\n        #morgdoniVsOverlay .vs-card{width:min(330px,38vw);min-height:300px;padding:22px 18px;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:2px solid rgba(255,255,255,.25);box-shadow:0 20px 60px rgba(0,0,0,.55)}\n        #morgdoniVsOverlay .vs-avatar{width:clamp(105px,16vw,155px);height:clamp(105px,16vw,155px);margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:70px;background:radial-gradient(circle,#fff3b0,#d68b21 70%);border:6px solid rgba(255,255,255,.8);overflow:hidden}\n        #morgdoniVsOverlay .vs-avatar img{width:100%;height:100%;object-fit:cover}\n        #morgdoniVsOverlay .vs-name{font-size:clamp(20px,3vw,30px);font-weight:900}\n        #morgdoniVsOverlay .vs-stats{margin-top:12px;color:#ffe39a}\n        #morgdoniVsOverlay .vs-mark{font-size:clamp(55px,10vw,105px);font-weight:1000;font-style:italic;color:#ffe082;text-shadow:0 5px 0 #7b3500,0 0 35px #ff9f1c}\n        @media(max-width:650px){#morgdoniVsOverlay .vs-card{width:40vw;min-height:250px;padding:13px 8px}#morgdoniVsOverlay .vs-players{gap:5px}}";
+        document.head.appendChild(style);
+    })();
 
     function showMorgdoniVS(players) {
         const old=document.getElementById('morgdoniVsOverlay'); if(old) old.remove();
