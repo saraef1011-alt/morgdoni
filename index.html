@@ -1106,6 +1106,7 @@ input,.chat-input{
             });
 
             socket.on('gameStarted', (data) => {
+                window.morgdoniGameStarted = true;
                 // Match flow: lobby/request -> VS -> game. Never return to the welcome screen.
                 const welcome = document.getElementById('welcomeAnim');
                 const container = document.getElementById('gameContainer');
@@ -1962,10 +1963,15 @@ input,.chat-input{
     }, 100);
 
     // ===== شروع =====
+    // صفحه خوش‌آمد فقط هنگام ورود اولیه نمایش داده می‌شود.
+    // اگر مسابقه شروع شده باشد، این تایمر نباید دوباره آن را برگرداند.
+    window.morgdoniGameStarted = false;
     setTimeout(() => {
+        if (window.morgdoniGameStarted) return;
         let w = document.getElementById('welcomeAnim');
         if(w) w.style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'block';
+        const gc = document.getElementById('gameContainer');
+        if(gc) gc.style.display = 'block';
     }, 2800);
 
     connectSocket();
