@@ -781,11 +781,11 @@ input,.chat-input{
     const gp=document.getElementById('gamePanel');
     const lp=document.getElementById('lobbyPanel');
     const jp=document.getElementById('joinPanel');
-    if(w){w.style.display='none';w.style.visibility='hidden';w.style.opacity='0';}
-    if(gc){gc.style.display='flex';gc.style.visibility='visible';gc.style.opacity='1';}
-    if(lp)lp.style.display='none';
-    if(jp)jp.style.display='none';
-    if(gp){gp.style.display='block';gp.style.visibility='visible';gp.style.opacity='1';}
+    if(w){w.remove();}
+    if(gc){gc.style.setProperty('display','flex','important');gc.style.setProperty('visibility','visible','important');gc.style.setProperty('opacity','1','important');}
+    if(lp){lp.style.setProperty('display','none','important');}
+    if(jp){jp.style.setProperty('display','none','important');}
+    if(gp){gp.style.setProperty('display','block','important');gp.style.setProperty('visibility','visible','important');gp.style.setProperty('opacity','1','important');}
 }
 
 function forceMorgdoniGameView() {
@@ -1099,6 +1099,8 @@ function forceMorgdoniGameView() {
 
             // ===== لابی بازیکنان آنلاین =====
             socket.on('registrationSuccess', (data) => {
+                // اگر بازی شروع شده، ثبت‌نام/آپدیت مجدد نباید ما را به لابی برگرداند.
+                if (window.morgdoniGameStarted) return;
                 myId = data.id;
                 myLobbyName = data.name;
                 document.getElementById('joinPanel').style.display = 'none';
@@ -1184,8 +1186,11 @@ function forceMorgdoniGameView() {
 
             socket.on('gameStarted', (data) => {
                 window.morgdoniGameStarted = true;
+                document.body.classList.add('morgdoni-in-game');
                 // Match flow: lobby/request -> VS -> game. Never return to the welcome screen.
                 const welcome = document.getElementById('welcomeAnim');
+                // Welcome را کامل حذف می‌کنیم تا هیچ اسکریپت دیگری نتواند بعداً آن را برگرداند.
+                if (welcome) welcome.remove();
                 const container = document.getElementById('gameContainer');
                 const lobby = document.getElementById('lobbyPanel');
                 const join = document.getElementById('joinPanel');
