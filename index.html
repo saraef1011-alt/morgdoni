@@ -1349,6 +1349,8 @@ input,.chat-input{
     }
 
     function backToJoinPanel() {
+        try { if (socket) socket.disconnect(); } catch (e) {}
+        socket = null; myId = null; socketListenersAttached = false;
         document.getElementById('lobbyPanel').style.display = 'none';
         document.getElementById('joinPanel').style.display = 'block';
     }
