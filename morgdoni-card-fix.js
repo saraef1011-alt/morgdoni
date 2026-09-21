@@ -32,15 +32,12 @@ let morgAutoStartRooms=new Set();
 function goVS(data){
   if(morgVsShown)return;
   morgVsShown=true;
-  const players=Array.isArray(data?.players)?data.players:[];
-  const p1=players[0]||{};
-  const p2=players[1]||{};
-  const qs=new URLSearchParams({
-    room:String(data?.roomId||window.roomId||''),
-    p1:String(p1.name||'بازیکن اول'),p2:String(p2.name||'بازیکن دوم'),
-    a1:String(p1.avatar||'🐔'),a2:String(p2.avatar||'🐓')
-  });
-  location.href='/vs.html?'+qs.toString();
+  const players=Array.isArray(data?.players)?data.players.slice(0,2):[];
+  // VS باید داخل همان صفحه اجرا شود؛ انتقال به /vs.html باعث می‌شد
+  // بعد از تمام شدن VS به / برگردیم و بازی کارت‌ها از بین برود.
+  if(typeof window.showMorgdoniVS==='function' && players.length>=2){
+    window.showMorgdoniVS(players);
+  }
 }
 function installGameFlow(s){
   if(!s||s.__MORG_VS_FLOW__)return;
