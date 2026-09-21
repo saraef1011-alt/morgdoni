@@ -784,6 +784,8 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
           +'</div><div style="margin-top:24px;color:#ffe39a;font-size:14px">نبرد در حال آماده‌سازی است…</div></div>';
         document.body.appendChild(ov);
     }
+    // در اختیار فایل‌های کمکی قرار می‌دهیم تا VS داخل همین صفحه نمایش داده شود.
+    window.showMorgdoniVS = showMorgdoniVS;
     function protectMorgdoniGameView(){
     if(!window.morgdoniGameStarted) return;
     const w=document.getElementById('welcomeAnim');
