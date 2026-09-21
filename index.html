@@ -476,7 +476,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
 <button onclick="showCustomMessage()">😀 استیکر</button>
 
 <button id="chatMicVisual" onclick="document.getElementById('micToggleBtn')?.click()">🎙️ ویس</button>
-<label class="file-send-btn">📎 فایل<input id="chatFileInput" type="file" hidden></label>
+<label class="file-send-btn">📎 فایل / 🎵 صدا<input id="chatFileInput" type="file" accept="audio/*,image/*,video/*,.gif" hidden></label>
 </div>
   </aside>
 </div>
@@ -1880,7 +1880,10 @@ function forceMorgdoniGameView() {
         const safeName=String(data.name||'فایل').replace(/[<>&"]/g,'');
         let body='';
         if(data.kind==='file'){
-            if((data.mime||'').startsWith('image/') && data.content){
+            if((data.mime||'').startsWith('audio/') && data.content){
+                const audioMime=String(data.mime).replace(/"/g,'');
+                body=`<audio controls preload="metadata" style="width:100%;margin-top:8px;border-radius:12px;"><source src="${data.content}" type="${audioMime}"></audio>`;
+            } else if((data.mime||'').startsWith('image/') && data.content){
                 body=`<img src="${data.content}" alt="${safeName}" style="max-width:100%;max-height:220px;border-radius:12px;display:block;margin-top:6px;">`;
             }
             body += `<a href="${data.content}" download="${safeName}" style="display:block;margin-top:6px;">📎 ${safeName} — دریافت فایل</a>`;
@@ -2198,12 +2201,23 @@ function forceMorgdoniGameView() {
 
  if(exitBtn) exitBtn.onclick=function(){
    if(confirm('از بازی خارج شوی؟')){
+     // خروج محلی را هم کامل ریست می‌کنیم تا Game Guard دوباره بازی را نشان ندهد.
+     window.morgdoniGameStarted=false;
+     window.morgdoniVsActive=false;
+     document.body.classList.remove('morgdoni-in-game');
+     try{ if(typeof stopVSFileMusic==="function") stopVSFileMusic(); }catch(e){}
+     try{ if(typeof closeVoiceChat==="function") closeVoiceChat(); }catch(e){}
      try{ if(typeof leaveGame==="function") leaveGame(); }catch(e){}
      try{ if(typeof socket!=="undefined"&&socket&&typeof roomId!=="undefined") socket.emit('leaveGame',{roomId}); }catch(e){}
-     const gp=q('#gamePanel'),lp=q('#lobbyPanel'),jp=q('#joinPanel');
-     if(gp) gp.style.display='none';
-     if(lp) lp.style.display='';
-     if(jp) jp.style.display='';
+     if(typeof roomId!=="undefined") roomId=null;
+     if(typeof gameState!=="undefined") gameState=null;
+     const ov=document.getElementById('morgdoniVsOverlay'); if(ov) ov.remove();
+     const gp=q('#gamePanel'),lp=q('#lobbyPanel'),jp=q('#joinPanel'),gc=q('#gameContainer');
+     if(gp) gp.style.setProperty('display','none','important');
+     if(lp) lp.style.setProperty('display','block','important');
+     if(jp) jp.style.setProperty('display','none','important');
+     if(gc) gc.style.setProperty('display','flex','important');
+     if(typeof updateStatus==="function") updateStatus('🌐 در صفحهٔ اصلی هستی');
    }
  };
 
