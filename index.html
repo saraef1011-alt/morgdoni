@@ -725,33 +725,11 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
     })();
 
     let vsFileMusic = null;
+    let gameChaseMusic = null;
 
     function startVSFileMusic() {
-        try {
-            if (!vsFileMusic) {
-                vsFileMusic = document.createElement('audio');
-                vsFileMusic.id = 'morgdoniVsAudio';
-                vsFileMusic.src = '/assets/vs-music/vs.mp3?vs=2';
-                vsFileMusic.preload = 'auto';
-                vsFileMusic.volume = 0.9;
-                vsFileMusic.setAttribute('playsinline', '');
-                vsFileMusic.setAttribute('webkit-playsinline', '');
-                document.body.appendChild(vsFileMusic);
-            }
-            vsFileMusic.load();
-            vsFileMusic.currentTime = 0;
-            const p = vsFileMusic.play();
-            if (p && typeof p.catch === 'function') {
-                p.catch((err) => {
-                    console.warn('VS MP3 play failed:', err);
-                    try { musicEnabled = true; startMusic(); } catch(e) {}
-                });
-            }
-            try { musicEnabled = true; startMusic(); } catch(e) {}
-        } catch (e) {
-            console.warn('VS music unavailable', e);
-            try { musicEnabled = true; startMusic(); } catch(err) {}
-        }
+        // موسیقی VS دیگر پخش نمی‌شود.
+        stopVSFileMusic();
     }
 
     function stopVSFileMusic() {
@@ -760,6 +738,41 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
                 vsFileMusic.pause();
                 vsFileMusic.currentTime = 0;
             }
+        } catch (e) {}
+    }
+
+    function startGameChaseMusic() {
+        try {
+            if (!gameChaseMusic) {
+                gameChaseMusic = document.createElement('audio');
+                gameChaseMusic.id = 'morgdoniGameChaseAudio';
+                gameChaseMusic.src = '/assets/game-music/chase.mp3';
+                gameChaseMusic.preload = 'auto';
+                gameChaseMusic.volume = 0.75;
+                gameChaseMusic.loop = true;
+                gameChaseMusic.setAttribute('playsinline', '');
+                gameChaseMusic.setAttribute('webkit-playsinline', '');
+                document.body.appendChild(gameChaseMusic);
+            }
+            gameChaseMusic.loop = true;
+            gameChaseMusic.currentTime = 0;
+            const p = gameChaseMusic.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(err => console.warn('Chase music play failed:', err));
+            }
+        } catch (e) {
+            console.warn('Chase music unavailable', e);
+        }
+    }
+
+    function stopGameChaseMusic() {
+        try {
+            if (gameChaseMusic) {
+                gameChaseMusic.pause();
+                gameChaseMusic.currentTime = 0;
+            }
+        } catch (e) {}
+    }
         } catch (e) {}
     }
 
@@ -825,7 +838,6 @@ function forceMorgdoniGameView() {
 
     function finishMorgdoniVS(){
         window.morgdoniVsActive = false;
-        stopVSFileMusic();
         const ov=document.getElementById('morgdoniVsOverlay');
         if(ov) ov.remove();
         // پایان VS باید همیشه مستقیماً وارد خود بازی شود.
@@ -1316,11 +1328,12 @@ function forceMorgdoniGameView() {
                     }
                 }
                 showMorgdoniVS(data.players);
-                startVSFileMusic();
+                // VS بدون موسیقی؛ موسیقی اصلی بازی بعد از ورود به خود بازی شروع می‌شود.
                 // اتاق فقط در همین نشست بازی فعال است و با باز کردن لینک اصلی بازیابی نمی‌شود.
 
                 // VS فقط یک لایه موقت است؛ به محض رسیدن gameState وارد خود بازی می‌شویم.
                 window.morgdoniVsActive = true;
+                startGameChaseMusic();
                 setTimeout(() => {
                     forceMorgdoniGameView();
                     window.morgdoniVsActive = false;
@@ -2206,6 +2219,7 @@ function forceMorgdoniGameView() {
      window.morgdoniVsActive=false;
      document.body.classList.remove('morgdoni-in-game');
      try{ if(typeof stopVSFileMusic==="function") stopVSFileMusic(); }catch(e){}
+     try{ if(typeof stopGameChaseMusic==="function") stopGameChaseMusic(); }catch(e){}
      try{ if(typeof closeVoiceChat==="function") closeVoiceChat(); }catch(e){}
      try{ if(typeof leaveGame==="function") leaveGame(); }catch(e){}
      try{ if(typeof socket!=="undefined"&&socket&&typeof roomId!=="undefined") socket.emit('leaveGame',{roomId}); }catch(e){}
