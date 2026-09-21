@@ -1331,15 +1331,16 @@ function forceMorgdoniGameView() {
                 // VS بدون موسیقی؛ موسیقی اصلی بازی بعد از ورود به خود بازی شروع می‌شود.
                 // اتاق فقط در همین نشست بازی فعال است و با باز کردن لینک اصلی بازیابی نمی‌شود.
 
-                // VS فقط یک لایه موقت است؛ به محض رسیدن gameState وارد خود بازی می‌شویم.
+                // VS فقط یک لایه موقت است؛ موسیقی Chase نباید هنگام VS پخش شود.
                 window.morgdoniVsActive = true;
-                startGameChaseMusic();
                 setTimeout(() => {
                     forceMorgdoniGameView();
                     window.morgdoniVsActive = false;
                     stopVSFileMusic();
                     const ov=document.getElementById('morgdoniVsOverlay');
                     if(ov) ov.remove();
+                    // VS تمام شد و حالا وارد خود بازی شدیم؛ Chase دقیقاً از اینجا شروع می‌شود.
+                    startGameChaseMusic();
                     if(socket && roomId) socket.emit('getGameState',{roomId});
                 }, 3000);
             });
