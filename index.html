@@ -1133,9 +1133,13 @@ function forceMorgdoniGameView() {
                 // اگر مسابقه شروع شده، هیچ رویداد دیگری نباید صفحه خوش‌آمد را برگرداند.
                 if (window.morgdoniGameStarted || state.gameStarted) {
                     window.morgdoniGameStarted = true;
-                    window.morgdoniVsActive = false;
-                    finishMorgdoniVS();
-                    forceMorgdoniGameView();
+                    // gameState بلافاصله بعد از gameStarted می‌رسد.
+                    // در این فاصله VS باید بماند و تایمر خودش بعد از ۳ ثانیه آن را ببندد.
+                    if (window.morgdoniVsActive) {
+                        forceMorgdoniGameView();
+                    } else {
+                        finishMorgdoniVS();
+                    }
                 }
                 const otherP = state.players.find(p => p.id !== myId);
                 if (otherP) otherPlayerId = otherP.id;
