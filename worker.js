@@ -20,6 +20,32 @@ export class GameRoom {
   sameRoom(a,b){return Object.values(this.data.rooms).some(r=>r.players?.some(p=>p.id===a)&&r.players?.some(p=>p.id===b))}
   startGame(rid){const r=this.data.rooms[rid];if(!r||r.players.length<2)return false;r.gameStarted=true;r.deck=createDeck();r.discardPile=[];r.eggTokens=18;r.winner=null;r.currentTurn=r.players[0].id;for(const p of r.players){p.hand=[];p.eggs=0;p.chicks=0;for(let i=0;i<4&&r.deck.length;i++)p.hand.push(r.deck.pop());if(this.data.online[p.id])this.data.online[p.id].status='playing'}this.roomBroadcast(r,'gameStarted',{roomId:rid,players:r.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar||'🐔',accountId:p.accountId||null,eggs:p.eggs||0,chicks:p.chicks||0})),state:r});this.roomBroadcast(r,'gameState',r);return true}
   newRoom(a,b,start=true){let rid;do{rid=Math.random().toString(36).slice(2,8).toUpperCase()}while(this.data.rooms[rid]);this.data.rooms[rid]={host:a.id,players:[this.player(a),this.player(b)],watchers:[],gameStarted:false,deck:createDeck(),eggTokens:18,currentTurn:null,winner:null,discardPile:[]};if(start)this.startGame(rid);return rid}
+  isBot(id){return String(id||'').startsWith('BOT_')}
+  botAction(r){
+    const p=r?.players?.find(x=>x.id===r.currentTurn); if(!p||!this.isBot(p.id)) return null;
+    const target=r.players.find(x=>x.id!==p.id);
+    const has=t=>p.hand.includes(t);
+    if(p.eggs>0&&p.hand.filter(x=>x==='مرغ').length>=2)return{action:'hatch'};
+    if(has('روباه')&&target?.eggs>0)return{action:'fox',data:{target:target.id}};
+    if(has('مار')&&target?.eggs>0)return{action:'snake',data:{target:target.id,count:1}};
+    if(has('تله')&&target?.hand?.length)return{action:'trap',data:{target:target.id,card:target.hand[Math.floor(Math.random()*target.hand.length)]}};
+    if(has('مرغ')&&has('خروس')&&has('لانه')&&r.eggTokens>0)return{action:'lay'};
+    if(p.hand.length<4&&r.deck?.length)return{action:'draw'};
+    const card=p.hand[Math.floor(Math.random()*p.hand.length)];
+    return card?{action:'discard',data:{card}}:{action:'endTurn'};
+  }
+  async runBotTurns(rid){
+    const r=this.data.rooms[rid]; if(!r||!r.gameStarted||r.winner||r.botProcessing)return;
+    r.botProcessing=true;
+    try{
+      let guard=0;
+      while(!r.winner&&r.players.some(x=>x.id===r.currentTurn&&this.isBot(x.id))&&guard++<40){
+        const bot=r.players.find(x=>x.id===r.currentTurn), move=this.botAction(r); if(!move)break;
+        await this.message(bot.id,JSON.stringify({type:'gameAction',data:{roomId:rid,action:move.action,data:move.data||{}}}));
+      }
+    }finally{r.botProcessing=false}
+  }
+
   async finish(r){const w=r.players.find(p=>p.chicks>=3);if(!w||r.winner)return;r.winner=w.id;for(const p of r.players){const a=this.account(p.accountId||p.id,p.name,p.avatar);a.gamesPlayed=(a.gamesPlayed||0)+1;if(p.id===w.id)a.wins=(a.wins||0)+1;else a.losses=(a.losses||0)+1;this.send(p.id,'profileData',{profile:a})}}
   async fetch(request){await this.ready;if(request.headers.get('Upgrade')!=='websocket')return new Response('WebSocket endpoint',{status:426});const pair=new WebSocketPair();const client=pair[0],ws=pair[1];ws.accept();const id=crypto.randomUUID();this.sessions.set(id,ws);this.send(id,'hello',{id});ws.addEventListener('message',e=>this.message(id,e.data));ws.addEventListener('close',()=>this.close(id));return new Response(null,{status:101,webSocket:client})}
   async message(id,raw){await this.ready;let m;try{m=JSON.parse(raw)}catch{return this.send(id,'error','درخواست نامعتبر است')}const t=m?.type,d=m?.data||{};if(!t)return;const online=this.data.online;if(online[id])online[id].lastSeen=Date.now();if(t==='heartbeat'||t==='ping'){this.send(id,'pong');return;}
@@ -46,7 +72,7 @@ export class GameRoom {
       if(a==='snake'){const i=p.hand.indexOf('مار'),n=Math.min(2,Math.max(1,Number(d.data?.count)||1));if(i>=0&&o?.eggs>0){p.hand.splice(i,1);const broken=Math.min(n,o.eggs);o.eggs-=broken;r.eggTokens+=broken;done=true}}
       if(a==='trap'){const i=p.hand.indexOf('تله'),j=o?.hand.indexOf(d.data?.card);if(i>=0&&j>=0){p.hand.splice(i,1);o.hand.splice(j,1);done=true}}
       if(a==='endTurn')done=true;
-      if(!done)return;while(p.hand.length<4&&r.deck.length)p.hand.push(r.deck.pop());if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[]}await this.finish(r);if(!r.winner){const i=r.players.findIndex(x=>x.id===r.currentTurn);r.currentTurn=r.players[(i+1)%r.players.length].id}this.roomBroadcast(r,'gameState',r);await this.save();return}
+      if(!done)return;while(p.hand.length<4&&r.deck.length)p.hand.push(r.deck.pop());if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[]}await this.finish(r);if(!r.winner){const i=r.players.findIndex(x=>x.id===r.currentTurn);r.currentTurn=r.players[(i+1)%r.players.length].id}this.roomBroadcast(r,'gameState',r);await this.save();if(!r.botProcessing)await this.runBotTurns(rid);return}
     if(t==='chatMessage'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()],p=r?.players.find(x=>x.id===id);if(!r||!p)return;const msg=String(d.message||'').slice(0,1000);if(!msg)return;this.roomBroadcast(r,'chatMessage',{sender:p.name,message:msg,time:new Date().toLocaleTimeString()});return}
     if(t==='chatMedia'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(!r||!d.content)return;const p=r.players.find(x=>x.id===id),watcher=(r.watchers||[]).includes(id);if(!p&&!watcher)return;const kind=String(d.kind||''),content=String(d.content);if(!['file','gif','sticker'].includes(kind)||content.length>7*1024*1024)return;if(kind==='file'&&Number(d.size||0)>5*1024*1024)return;if(kind==='file'&&/\.(exe|bat|cmd|com|scr|msi|ps1|vbs|js)$/i.test(String(d.name||'')))return;if(kind==='gif'&&d.mime&&d.mime!=='image/gif')return;this.roomBroadcast(r,'chatMedia',{sender:p?.name||online[id]?.name||'تماشاگر',kind,content,name:d.name,mime:d.mime,size:d.size,time:new Date().toLocaleTimeString()});return}
     if(t==='leaveGame'){const cur=this.roomOf(id);if(cur){const r=cur.room;if(cur.role==='player')r.players=r.players.filter(p=>p.id!==id);else r.watchers=(r.watchers||[]).filter(x=>x!==id);if(!r.players.length)delete this.data.rooms[cur.roomId];else{if(r.host===id)r.host=r.players[0].id;if(r.currentTurn===id)r.currentTurn=r.players[0].id;this.roomBroadcast(r,'roomUpdate',r);this.roomBroadcast(r,'gameState',r)}}if(online[id])online[id].status='ready';this.data.queue=this.data.queue.filter(x=>x!==id);this.updateList();await this.save();return}
