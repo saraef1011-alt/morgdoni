@@ -1,6 +1,6 @@
 // Native Node.js game room for Morgdoni.
 // No Cloudflare Workers / Durable Objects / WebSocketPair APIs are used here.
-export class GameRoom {
+class BaseGameRoom {
   constructor(state){this.state=state;this.sessions=new Map();this.ready=this.load()}
   async load(){this.data=await this.state.storage.get('data')||{rooms:{},online:{},accounts:{},pending:{},queue:[]};this.data.rooms??={};this.data.online??={};this.data.accounts??={};this.data.pending??={};this.data.queue??=[];this.data.online={};this.data.pending={};this.data.queue=[];await this.state.storage.put('data',this.data);try{await this.state.storage.setAlarm(Date.now()+15000)}catch{}}
   save(){return this.state.storage.put('data',this.data)}
