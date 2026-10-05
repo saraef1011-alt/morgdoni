@@ -5,7 +5,8 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GameRoom } from './worker-entry.js';
+import { GameRoom as MultiGameRoom } from './worker-multi.js';
+import { cleanupDisconnectedPlayer } from './presence-cleanup.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,7 +41,13 @@ const state = {
   }
 };
 
-const room = new GameRoom(state);
+class NodeGameRoom extends MultiGameRoom {
+  async close(id) {
+    await cleanupDisconnectedPlayer(this, id);
+  }
+}
+
+const room = new NodeGameRoom(state);
 await room.ready;
 
 const app = express();
