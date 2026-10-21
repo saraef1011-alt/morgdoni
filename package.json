@@ -1,16 +1,17 @@
 {
-  "name": "morgdoni-node",
+  "name": "morgdoni-nodejs",
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "Node.js adaptation of the supplied Cloudflare Worker version of Morgdoni",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check worker.js && node --check worker-multi.js"
   },
   "dependencies": {
-    "express": "^5.1.0",
     "ws": "^8.18.3"
   }
 }
