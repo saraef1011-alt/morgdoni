@@ -1,7 +1,3 @@
-# مرغ‌دونی آنلاین
+# مرغ‌دونی آنلاین — نسخه Node.js
 
-نسخه‌ی Cloudflare پروژه‌ی مرغ‌دونی.
-
-## اجرا
-
-این پروژه برای Cloudflare Workers طراحی شده است. `index.html` رابط بازی و `worker.js` ورودی Worker است.
+برای اجرا: `npm install` سپس `npm start` و باز کردن `http://localhost:3000`.

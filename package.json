@@ -3,15 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Node.js adaptation of the supplied Cloudflare Worker version of Morgdoni",
-  "engines": {
-    "node": ">=20"
-  },
-  "scripts": {
-    "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check worker.js && node --check worker-multi.js"
-  },
-  "dependencies": {
-    "ws": "^8.18.3"
-  }
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.21.2", "ws": "^8.18.0" }
 }
