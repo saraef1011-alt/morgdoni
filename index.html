@@ -1352,12 +1352,18 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('chatMessage', (data) => {
-                if (data.sender !== myName) soundChatMsg();
+                if (data.sender !== myName) {
+                    soundChatMsg();
+                    // استیکرهای متنی برای گیرنده هم همان لحظه روی صفحه نمایش داده شوند.
+                    showBigMessage(String(data.message || ''), true);
+                }
                 addChatMessage(data.sender, data.message, data.time);
             });
             socket.on('chatMedia', (data) => {
                 if (data.sender !== myName) soundChatMsg();
                 addMediaChatMessage(data);
+                // استیکر تصویری/ایموجی برای فرستنده و همهٔ بازیکنان روی صفحه ظاهر شود.
+                if (data.kind === 'sticker') showBigMessage(String(data.content || '😀'), true);
             });
 
             socket.on('actionDone', (data) => {
@@ -1896,7 +1902,7 @@ function forceMorgdoniGameView() {
                 const audioMime=String(data.mime).replace(/"/g,'');
                 body=`<audio controls preload="metadata" style="width:100%;margin-top:8px;border-radius:12px;"><source src="${data.content}" type="${audioMime}"></audio>`;
             } else if((data.mime||'').startsWith('image/') && data.content){
-                body=`<img src="${data.content}" alt="${safeName}" style="max-width:100%;max-height:220px;border-radius:12px;display:block;margin-top:6px;">`;
+                body=`<img src="${data.content}" alt="${safeName}" loading="lazy" style="max-width:100%;max-height:260px;width:auto;height:auto;object-fit:contain;border-radius:12px;display:block;margin:8px auto;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=&quot;color:#b91c1c&quot;>تصویر بارگذاری نشد؛ فایل را دوباره بفرست.</span>')">`;
             }
             body += `<a href="${data.content}" download="${safeName}" style="display:block;margin-top:6px;">📎 ${safeName} — دریافت فایل</a>`;
         } else if(data.kind==='gif'){
