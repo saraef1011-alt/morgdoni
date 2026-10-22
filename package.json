@@ -1,6 +1,6 @@
 {
   "name": "morgdoni-online",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "description": "نسخه Node.js بازی آنلاین مرغ‌دونی",
@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check worker.js && node --check worker-multi.js"
+    "check": "node --check server.mjs && node --check worker.js && node --check worker-multi.js && node --check worker-entry.js && node --check presence-cleanup.js && node --check request-ui.js && node --check lobby-fix.js && node --check online-panel.js && node --check morgdoni-card-fix.js",
+    "test": "npm run check && node --test tests/*.test.mjs"
   },
   "dependencies": {
     "ws": "^8.18.3"

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: morgdoni-nodejs
+    runtime: node
+    plan: starter
+    branch: nodejs
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
