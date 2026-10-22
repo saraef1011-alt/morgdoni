@@ -2,7 +2,7 @@ services:
   - type: web
     name: morgdoni-nodejs
     runtime: node
-    plan: starter
+    plan: free
     branch: nodejs
     buildCommand: npm install
     startCommand: npm start
