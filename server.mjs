@@ -68,7 +68,7 @@ server.on('upgrade', (req, socket, head) => {
 });
 wss.on('connection', ws => {
   const id = crypto.randomUUID();
-  const session = { get readyState(){return ws.readyState;}, send(data){ if (ws.readyState === ws.OPEN) ws.send(data); } };
+  const session = { get readyState(){return ws.readyState;}, send(data){ if (ws.readyState === 1) ws.send(data); } };
   game.sessions.set(id, session);
   game.send(id, 'hello', { id });
   ws.on('message', raw => { game.message(id, raw.toString()).catch(err => { console.error('message handler:', err); game.send(id,'error','خطای داخلی سرور'); }); });
