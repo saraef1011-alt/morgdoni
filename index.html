@@ -709,6 +709,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
                 showBigMessage(msg, true);
                 if (socket && roomId) {
                     socket.emit('chatMessage', { roomId, message: msg });
+                    socket.emit('chatSticker', { roomId, message: msg });
                 }
                 closeModal();
             } 
@@ -721,6 +722,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
         const style=document.createElement('style');
         style.id='morgdoni-vs-style';
         style.textContent="#morgdoniVsOverlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(255,210,90,.14),transparent 25%),linear-gradient(135deg,#120d09,#24150d 45%,#0b0806);color:#fff}\n        #morgdoniVsOverlay .vs-box{width:min(1100px,96vw);text-align:center}\n        #morgdoniVsOverlay .vs-title{font-size:clamp(22px,4vw,40px);font-weight:900;margin-bottom:24px}\n        #morgdoniVsOverlay .vs-players{display:flex;align-items:center;justify-content:center;gap:clamp(10px,5vw,70px)}\n        #morgdoniVsOverlay .vs-card{width:min(330px,38vw);min-height:300px;padding:22px 18px;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:2px solid rgba(255,255,255,.25);box-shadow:0 20px 60px rgba(0,0,0,.55)}\n        #morgdoniVsOverlay .vs-avatar{width:clamp(105px,16vw,155px);height:clamp(105px,16vw,155px);margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:70px;background:radial-gradient(circle,#fff3b0,#d68b21 70%);border:6px solid rgba(255,255,255,.8);overflow:hidden}\n        #morgdoniVsOverlay .vs-avatar img{width:100%;height:100%;object-fit:cover}\n        #morgdoniVsOverlay .vs-name{font-size:clamp(20px,3vw,30px);font-weight:900}\n        #morgdoniVsOverlay .vs-stats{margin-top:12px;color:#ffe39a}\n        #morgdoniVsOverlay .vs-mark{font-size:clamp(55px,10vw,105px);font-weight:1000;font-style:italic;color:#ffe082;text-shadow:0 5px 0 #7b3500,0 0 35px #ff9f1c}\n        @media(max-width:650px){#morgdoniVsOverlay .vs-card{width:40vw;min-height:250px;padding:13px 8px}#morgdoniVsOverlay .vs-players{gap:5px}}";
+        style.textContent += "\n#morgdoniVsOverlay .vs-many{flex-wrap:wrap;gap:10px;max-height:78vh;overflow:auto;padding:8px}\n#morgdoniVsOverlay .vs-many .vs-card{width:clamp(125px,19vw,220px);min-height:180px;padding:12px}\n#morgdoniVsOverlay .vs-many .vs-avatar{width:clamp(60px,8vw,95px);height:clamp(60px,8vw,95px);font-size:42px}\n#morgdoniVsOverlay .vs-many .vs-mark{font-size:clamp(28px,4vw,50px)}\n#morgdoniVsOverlay .vs-box{max-height:95vh;overflow:auto}";
         document.head.appendChild(style);
     })();
 
@@ -776,23 +778,11 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
 
     function showMorgdoniVS(players) {
         const old=document.getElementById('morgdoniVsOverlay'); if(old) old.remove();
-        const list=Array.isArray(players)?players.slice(0,2):[];
-        if(list.length<2) return;
-        const safe=(v,d)=>v||d;
-        const esc=(v)=>escapeHtml(String(v||'بازیکن'));
-        const avatar=(v,d)=>{
-            const a=safe(v,d);
-            return String(a).startsWith('data:image/')
-                ? '<img src="'+a+'" alt="آواتار">'
-                : escapeHtml(String(a));
-        };
-        const ov=document.createElement('div');
-        ov.id='morgdoniVsOverlay';
-        ov.innerHTML='<div class="vs-box"><div class="vs-title">⚔️ آماده‌ی نبرد مرغ‌دونی!</div><div class="vs-players">'
-          +'<div class="vs-card"><div class="vs-avatar">'+avatar(list[0].avatar,'🐔')+'</div><div class="vs-name">'+esc(list[0].name)+'</div><div class="vs-stats">🥚 '+safe(list[0].eggs,0)+' &nbsp; 🐥 '+safe(list[0].chicks,0)+'</div></div>'
-          +'<div class="vs-mark">VS</div>'
-          +'<div class="vs-card"><div class="vs-avatar">'+avatar(list[1].avatar,'🐓')+'</div><div class="vs-name">'+esc(list[1].name)+'</div><div class="vs-stats">🥚 '+safe(list[1].eggs,0)+' &nbsp; 🐥 '+safe(list[1].chicks,0)+'</div></div>'
-          +'</div><div style="margin-top:24px;color:#ffe39a;font-size:14px">نبرد در حال آماده‌سازی است…</div></div>';
+        const list=Array.isArray(players)?players:[]; if(list.length<2) return;
+        const safe=(v,d)=>v??d, esc=(v)=>escapeHtml(String(v||'بازیکن'));
+        const avatar=(v,d)=>{const a=safe(v,d);return String(a).startsWith('data:image/')?'<img src="'+a+'" alt="آواتار">':escapeHtml(String(a));};
+        const ov=document.createElement('div'); ov.id='morgdoniVsOverlay';
+        ov.innerHTML='<div class="vs-box"><div class="vs-title">⚔️ آماده‌ی نبرد مرغ‌دونی!</div><div class="vs-players vs-many">'+list.map((p,i)=> (i?'<div class="vs-mark">VS</div>':'')+'<div class="vs-card"><div class="vs-avatar">'+avatar(p.avatar,i%2?'🐓':'🐔')+'</div><div class="vs-name">'+esc(p.name)+'</div><div class="vs-stats">🥚 '+safe(p.eggs,0)+' &nbsp; 🐥 '+safe(p.chicks,0)+'</div></div>').join('')+'</div><div style="margin-top:24px;color:#ffe39a;font-size:14px">نبرد در حال آماده‌سازی است…</div></div>';
         document.body.appendChild(ov);
     }
     // در اختیار فایل‌های کمکی قرار می‌دهیم تا VS داخل همین صفحه نمایش داده شود.
@@ -1245,6 +1235,12 @@ function forceMorgdoniGameView() {
                 showBigMessage(`❌ ${msg}`, true);
             });
 
+            socket.on('quickGameQueued', (data) => {
+                const needed = Number(data?.players || 2);
+                const found = Number(data?.found || 1);
+                showBigMessage('⏳ بازیکن '+found+' از '+needed+'؛ منتظر بقیه…', false);
+            });
+
             socket.on('quickGameError', (msg) => {
                 if (msg.includes('منتظر بازیکن')) {
                     showBigMessage(msg, false);
@@ -1352,18 +1348,19 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('chatMessage', (data) => {
-                if (data.sender !== myName) {
-                    soundChatMsg();
-                    // استیکرهای متنی برای گیرنده هم همان لحظه روی صفحه نمایش داده شوند.
-                    showBigMessage(String(data.message || ''), true);
-                }
+                if (data.sender !== myName) soundChatMsg();
                 addChatMessage(data.sender, data.message, data.time);
+            });
+            socket.on('chatSticker', (data) => {
+                if (data && data.sender !== myName) {
+                    soundChatMsg();
+                    showBigMessage(escapeHtml(String(data.message || '😀')), true);
+                }
             });
             socket.on('chatMedia', (data) => {
                 if (data.sender !== myName) soundChatMsg();
                 addMediaChatMessage(data);
-                // استیکر تصویری/ایموجی برای فرستنده و همهٔ بازیکنان روی صفحه ظاهر شود.
-                if (data.kind === 'sticker') showBigMessage(String(data.content || '😀'), true);
+                if (data.kind === 'sticker' && data.content) showBigMessage(escapeHtml(String(data.content)), true);
             });
 
             socket.on('actionDone', (data) => {
@@ -1623,7 +1620,16 @@ function forceMorgdoniGameView() {
 
     function quickGame() {
         if (!socket) return;
-        socket.emit('quickGame');
+        const choices = Array.from({length:9}, (_,i)=>i+2).map(n=>({
+            text: n+' نفره',
+            class: 'purple',
+            action: () => {
+                closeModal();
+                socket.emit('quickGame', { players: n });
+                showBigMessage('🎲 منتظر '+n+' بازیکن هستیم…', false);
+            }
+        }));
+        showModal('🎮 بازی سریع چند نفره', choices, 'تعداد بازیکنان را انتخاب کن (۲ تا ۱۰ نفر)');
     }
 
     function renderLobby(list) {
