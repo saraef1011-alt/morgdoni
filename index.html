@@ -1255,7 +1255,7 @@ function forceMorgdoniGameView() {
                 updateQuickWheel(data);
                 const needed = Number(data?.players || 2);
                 const found = Number(data?.found || 1);
-                showBigMessage('⏳ بازیکن '+found+' از '+needed+'؛ منتظر بقیه…', false);
+                // وضعیت انتظار داخل صفحه‌ی گردونه نمایش داده می‌شود.
             });
 
             socket.on('quickGameError', (msg) => {
