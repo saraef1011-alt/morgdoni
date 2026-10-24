@@ -94,7 +94,23 @@
         .media-btn.on { background: #27ae60; box-shadow: 0 4px 0 #1a6b3b; }
         .media-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #5d6d7e; }
         @media (max-width: 700px) { .card { width: 48px; height: 65px; } .card span { font-size: 1.4rem; } .action-btn { padding: 6px 12px; font-size: 0.7rem; } .big-screen-message { font-size: 1.8rem; padding: 20px 30px; white-space: normal; width: 85%; } .center-gif { font-size: 1.4rem; padding: 15px 25px; white-space: normal; width: 85%; } .modal-box { padding: 20px; } .modal-box h3 { font-size: 1.2rem; } }
-    </style>
+    
+/* Quick-match spinning wheel */
+#quickWheelOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at center,rgba(72,35,112,.94),rgba(9,8,25,.98));backdrop-filter:blur(10px);color:#fff;text-align:center}
+#quickWheelOverlay .qw-panel{width:min(94vw,560px);padding:28px 22px;border:2px solid #ffd166;border-radius:28px;background:linear-gradient(145deg,#24143e,#49245d);box-shadow:0 0 50px #ffb70355}
+#quickWheelOverlay .qw-title{font-size:clamp(23px,5vw,36px);font-weight:900;color:#ffe39a;margin-bottom:8px}
+#quickWheelOverlay .qw-sub{color:#f6e8ff;margin-bottom:20px}
+#quickWheelOverlay .qw-wheel-wrap{width:min(66vw,290px);height:min(66vw,290px);margin:0 auto 22px;position:relative}
+#quickWheelOverlay .qw-wheel{width:100%;height:100%;border-radius:50%;border:9px solid #ffcf5c;background:conic-gradient(#e74c3c 0 45deg,#f39c12 45deg 90deg,#27ae60 90deg 135deg,#16a085 135deg 180deg,#2980b9 180deg 225deg,#8e44ad 225deg 270deg,#e84393 270deg 315deg,#f1c40f 315deg 360deg);box-shadow:0 0 0 5px #8a4c1d,0 0 32px #ffce4a88;animation:qwSpin 1.35s linear infinite;position:relative}
+#quickWheelOverlay .qw-wheel:before{content:'🐔';position:absolute;inset:35%;display:grid;place-items:center;background:#fff2c7;border:5px solid #a96a18;border-radius:50%;font-size:clamp(28px,7vw,46px);box-shadow:0 4px 0 #7b3f00}
+#quickWheelOverlay .qw-pointer{position:absolute;z-index:2;top:-12px;left:50%;transform:translateX(-50%);font-size:42px;filter:drop-shadow(0 3px 2px #000)}
+#quickWheelOverlay .qw-status{font-size:18px;font-weight:800;min-height:30px;color:#fff1b8}
+#quickWheelOverlay .qw-count{font-size:14px;color:#dfc9ef;margin-top:8px}
+#quickWheelOverlay .qw-cancel{margin-top:20px;padding:10px 24px;border:1px solid #ffd166;border-radius:14px;background:#34204b;color:#fff;font-weight:800;cursor:pointer}
+@keyframes qwSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){#quickWheelOverlay .qw-wheel{animation-duration:5s}}
+
+</style>
 <style id="morgdoni-graphical-theme">
 /* MORG DONI GRAPHICAL THEME */
 :root{--mg-gold:#ffd166;--mg-orange:#ff8c42;--mg-purple:#32164d}
@@ -1236,12 +1252,14 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('quickGameQueued', (data) => {
+                updateQuickWheel(data);
                 const needed = Number(data?.players || 2);
                 const found = Number(data?.found || 1);
                 showBigMessage('⏳ بازیکن '+found+' از '+needed+'؛ منتظر بقیه…', false);
             });
 
             socket.on('quickGameError', (msg) => {
+                hideQuickWheel();
                 if (msg.includes('منتظر بازیکن')) {
                     showBigMessage(msg, false);
                 } else {
@@ -1250,6 +1268,7 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('gameError', (msg) => {
+                hideQuickWheel();
                 showBigMessage(`❌ ${msg}`, true);
             });
 
@@ -1266,6 +1285,7 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('gameStarted', (data) => {
+                hideQuickWheel();
                 window.morgdoniGameStarted = true;
                 document.body.classList.add('morgdoni-in-game');
                 // Match flow: lobby/request -> VS -> game. Never return to the welcome screen.
@@ -1618,6 +1638,42 @@ function forceMorgdoniGameView() {
         document.getElementById('joinPanel').style.display = 'block';
     }
 
+
+    function showQuickWheel(needed) {
+        let overlay = document.getElementById('quickWheelOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'quickWheelOverlay';
+            overlay.innerHTML = '<div class="qw-panel"><div class="qw-title">🎡 گردونه‌ی بازی سریع</div><div class="qw-sub">مرغ‌دونی داره بازیکن‌ها رو جمع می‌کنه!</div><div class="qw-wheel-wrap"><div class="qw-pointer">📍</div><div class="qw-wheel"></div></div><div class="qw-status" id="qwStatus">در حال پیدا کردن حریف‌ها…</div><div class="qw-count" id="qwCount"></div><button class="qw-cancel" type="button" id="qwCancel">لغو انتظار</button></div>';
+            document.body.appendChild(overlay);
+            document.getElementById('qwCancel').addEventListener('click', () => {
+                try { if (socket) socket.emit('cancelQuickGame'); } catch(e) {}
+                hideQuickWheel();
+                showBigMessage('انتظار بازی لغو شد', false);
+            });
+        }
+        overlay.style.display = 'flex';
+        overlay.dataset.needed = String(needed || 2);
+        const status = document.getElementById('qwStatus');
+        const count = document.getElementById('qwCount');
+        if (status) status.textContent = 'در حال پیدا کردن بازیکن‌ها…';
+        if (count) count.textContent = '۰ از ' + (needed || 2) + ' بازیکن آماده';
+    }
+    function updateQuickWheel(data) {
+        const overlay = document.getElementById('quickWheelOverlay');
+        if (!overlay || overlay.style.display === 'none') return;
+        const needed = Number(data?.players || overlay.dataset.needed || 2);
+        const found = Number(data?.found || 1);
+        const status = document.getElementById('qwStatus');
+        const count = document.getElementById('qwCount');
+        if (status) status.textContent = found >= needed ? '🎉 همه آماده‌اند؛ شروع بازی!' : '🔎 دنبال بازیکن‌های بیشتر می‌گردیم…';
+        if (count) count.textContent = found + ' از ' + needed + ' بازیکن پیدا شدند';
+    }
+    function hideQuickWheel() {
+        const overlay = document.getElementById('quickWheelOverlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
     function quickGame() {
         if (!socket) return;
         const choices = Array.from({length:9}, (_,i)=>i+2).map(n=>({
@@ -1625,8 +1681,8 @@ function forceMorgdoniGameView() {
             class: 'purple',
             action: () => {
                 closeModal();
+                showQuickWheel(n);
                 socket.emit('quickGame', { players: n });
-                showBigMessage('🎲 منتظر '+n+' بازیکن هستیم…', false);
             }
         }));
         showModal('🎮 بازی سریع چند نفره', choices, 'تعداد بازیکنان را انتخاب کن (۲ تا ۱۰ نفر)');
