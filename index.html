@@ -404,11 +404,25 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
       <button id="enterLobbyBtn" class="lobby-btn">🌐 ورود به لابی بازیکنان آنلاین</button>
     </div>
 
-    <div id="lobbyPanel" class="lobby-screen" style="display:none;">
-      <div class="lobby-head"><div><b>👥 لابی آنلاین</b><small><span id="onlineCount">0</span> بازیکن آنلاین</small></div><button class="quick-btn" id="quickGameBtn">🎲 بازی سریع</button></div>
-      <div class="players lobby-players" id="lobbyPlayersArea"></div>
-      <div id="lobbyEmptyMsg" class="empty-state" style="display:none;">🐣 فعلاً بازیکن دیگری آنلاین نیست</div>
-      <button class="back-btn" id="lobbyBackBtn">↩️ بازگشت</button>
+    <div id="lobbyPanel" class="lobby-screen epic-lobby" style="display:none;">
+      <div class="epic-lobby-top">
+        <div class="epic-brand"><div class="epic-brand-mark">🐔</div><div><div class="epic-eyebrow">MORG DONI • ONLINE ARENA</div><h2>دهکده‌ی مرغ‌دونی</h2><p>بازیکن‌ها رو پیدا کن، تیمت رو بساز و وارد نبرد شو!</p></div></div>
+        <div class="epic-live-pill"><span class="epic-live-dot"></span> اتصال زنده <b id="onlineCount">0</b><small>بازیکن</small></div>
+      </div>
+      <div class="epic-lobby-hero">
+        <div class="epic-hero-copy"><div class="epic-kicker">✦ فصل رقابت آنلاین ✦</div><h1>وقتِ <span>مرغ‌دونی</span> است!</h1><p>دوست‌ها رو دعوت کن یا با بازی سریع، بازیکن‌های آنلاین رو پیدا کن.</p><div class="epic-hero-tags"><span>🥚 جمع‌آوری تخم</span><span>🐣 ساخت جوجه</span><span>🦊 نبرد تاکتیکی</span></div></div>
+        <div class="epic-hero-art" aria-hidden="true"><div class="epic-orbit orbit-one"></div><div class="epic-orbit orbit-two"></div><div class="epic-chicken">🐓</div><div class="epic-floating egg-one">🥚</div><div class="epic-floating egg-two">🐣</div><div class="epic-floating egg-three">✨</div></div>
+      </div>
+      <div class="epic-lobby-actions">
+        <div class="epic-section-heading"><div><span class="epic-section-icon">⚡</span><div><b>ورود سریع به رقابت</b><small>تعداد بازیکن‌ها رو انتخاب کن و بزن بریم</small></div></div><span class="epic-status-label"><i></i> آماده‌ی بازی</span></div>
+        <button class="quick-btn epic-quick-btn" id="quickGameBtn"><span class="epic-quick-icon">🎡</span><span><b>بازی سریع</b><small>پیدا کردن بازیکن و شروع خودکار</small></span><span class="epic-arrow">←</span></button>
+      </div>
+      <div class="epic-players-section">
+        <div class="epic-section-heading"><div><span class="epic-section-icon">🌐</span><div><b>بازیکن‌های آنلاین</b><small>برای بازی مستقیم، درخواست بفرست</small></div></div><span class="epic-online-counter"><span id="epicOtherCount">۰</span> نفر</span></div>
+        <div class="players lobby-players epic-player-grid" id="lobbyPlayersArea"></div>
+        <div id="lobbyEmptyMsg" class="empty-state epic-empty" style="display:none;"><div class="epic-empty-art">🐣</div><b>هنوز کسی اینجا نیست!</b><p>اولین نفر هستی؛ کمی صبر کن یا بازی سریع رو امتحان کن.</p><span class="epic-empty-pulse"></span></div>
+      </div>
+      <div class="epic-lobby-footer"><span>✨ بازی جوانمردانه، رقابت هیجان‌انگیز</span><button class="back-btn epic-back-btn" id="lobbyBackBtn">↩ بازگشت</button></div>
     </div>
 
     <!-- پنل آنلاین داخل خود index.html -->
@@ -1696,6 +1710,8 @@ function forceMorgdoniGameView() {
         if (!area) return;
 
         countSpan.innerText = list.length;
+        const epicCount = document.getElementById('epicOtherCount');
+        if (epicCount) epicCount.textContent = String(list.filter(p => p.id !== myId).length);
 
         // وضعیت خودم را برای فعال/غیرفعال کردن دکمه «بازی سریع» بررسی کن
         const me = list.find(p => p.id === myId);
@@ -2352,5 +2368,37 @@ document.addEventListener('DOMContentLoaded', function(){
  if(fi) fi.addEventListener('change',function(){ if(this.files[0]) sendFileToChat(this.files[0]); this.value=''; });
 });
 </script>
+
+<style id="morgdoni-epic-lobby">
+/* One definitive, redesigned lobby. Legacy floating online panel is retired visually. */
+#liveOnlinePanel,#liveOnlineOpen{display:none!important}
+#lobbyPanel.epic-lobby{position:relative;isolation:isolate;overflow:hidden;width:min(1180px,100%);margin:22px auto;padding:clamp(15px,3vw,34px);border:1px solid rgba(255,220,139,.24);border-radius:32px;background:radial-gradient(ellipse at 12% 0%,rgba(139,92,246,.25),transparent 34%),radial-gradient(ellipse at 95% 35%,rgba(14,165,233,.17),transparent 30%),linear-gradient(145deg,#111827 0%,#17132d 48%,#0b1729 100%);box-shadow:0 30px 90px #030712a8,inset 0 1px 0 #ffffff18;color:#f8fafc}
+#lobbyPanel.epic-lobby:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.15;background-image:linear-gradient(#ffffff10 1px,transparent 1px),linear-gradient(90deg,#ffffff10 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(to bottom,black,transparent 85%)}
+.epic-lobby-top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px;flex-wrap:wrap}
+.epic-brand{display:flex;align-items:center;gap:15px}.epic-brand-mark{display:grid;place-items:center;width:62px;height:62px;border-radius:21px;background:linear-gradient(145deg,#fcd34d,#fb923c);font-size:35px;box-shadow:0 9px 28px #f59e0b40, inset 0 2px 0 #fff8}
+.epic-eyebrow{font-size:10px;letter-spacing:2.4px;color:#fbbf24;font-weight:900}.epic-brand h2{font-size:clamp(20px,3vw,28px);margin:3px 0;color:#fff}.epic-brand p{color:#aab4cc;font-size:13px}
+.epic-live-pill{display:flex;align-items:center;gap:9px;padding:11px 16px;border:1px solid #34d39944;background:#064e3b55;border-radius:15px;color:#a7f3d0;font-weight:800}.epic-live-pill b{font-size:19px;color:#fff;margin-right:4px}.epic-live-pill small{color:#a7f3d0}.epic-live-dot,.epic-status-label i{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 5px #34d39922;animation:epicPulse 1.8s infinite}
+.epic-lobby-hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(220px,.8fr);align-items:center;gap:18px;min-height:255px;padding:clamp(20px,4vw,38px);border-radius:27px;overflow:hidden;border:1px solid #c4b5fd2b;background:linear-gradient(115deg,#302052dd,#25234cdd 53%,#123c53dd);box-shadow:inset 0 1px 0 #ffffff12}
+.epic-kicker{display:inline-flex;padding:7px 12px;border-radius:10px;background:#fbbf241c;border:1px solid #fbbf243b;color:#fcd34d;font-size:12px;font-weight:900}.epic-hero-copy h1{font-size:clamp(29px,5vw,49px);line-height:1.2;margin:15px 0 10px;color:#fff}.epic-hero-copy h1 span{color:#fbbf24;text-shadow:0 0 25px #f59e0b50}.epic-hero-copy p{color:#d2d7e8;line-height:1.9;max-width:470px}.epic-hero-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:19px}.epic-hero-tags span{padding:8px 10px;border-radius:11px;background:#ffffff0c;border:1px solid #ffffff15;font-size:11px;color:#e5e7eb}
+.epic-hero-art{position:relative;display:grid;place-items:center;min-height:205px}.epic-chicken{position:relative;z-index:2;display:grid;place-items:center;width:160px;height:160px;border-radius:50%;font-size:105px;background:radial-gradient(circle at 35% 25%,#fff7d4,#fbbf24 58%,#f97316);border:7px solid #ffffff30;box-shadow:0 0 0 15px #ffffff08,0 0 65px #f59e0b45;animation:epicFloat 4s ease-in-out infinite}.epic-orbit{position:absolute;border:1px dashed #fcd34d55;border-radius:50%;width:220px;height:220px;animation:epicOrbit 18s linear infinite}.orbit-two{width:260px;height:185px;transform:rotate(-32deg);border-color:#a5b4fc55;animation-direction:reverse}.epic-floating{position:absolute;z-index:3;filter:drop-shadow(0 8px 12px #0006);font-size:30px;animation:epicFloat 3.5s ease-in-out infinite}.egg-one{top:14%;right:12%}.egg-two{bottom:8%;left:9%;animation-delay:-1.2s}.egg-three{top:13%;left:15%;animation-delay:-2s}
+.epic-lobby-actions,.epic-players-section{margin-top:25px;padding:clamp(15px,2.4vw,24px);border:1px solid #ffffff13;border-radius:24px;background:linear-gradient(145deg,#ffffff09,#ffffff04);box-shadow:inset 0 1px 0 #ffffff09}
+.epic-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px;flex-wrap:wrap}.epic-section-heading>div{display:flex;align-items:center;gap:12px}.epic-section-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#a78bfa1c;border:1px solid #a78bfa33;font-size:22px}.epic-section-heading b{display:block;color:#fff;font-size:17px}.epic-section-heading small{display:block;color:#9ca9c4;font-size:12px;margin-top:4px}.epic-status-label{display:flex;align-items:center;gap:9px;color:#a7f3d0;font-size:12px;font-weight:800}
+#lobbyPanel .epic-quick-btn{width:100%;display:flex;align-items:center;gap:16px;text-align:right;padding:17px 20px;border:1px solid #fcd34d66!important;border-radius:20px!important;background:linear-gradient(105deg,#f59e0b,#f97316 52%,#ea580c)!important;color:#fff!important;box-shadow:0 10px 0 #7c2d12,0 18px 36px #f9731633!important;min-height:86px}
+.epic-quick-icon{display:grid;place-items:center;width:52px;height:52px;flex:0 0 52px;border-radius:16px;background:#fff2;border:1px solid #ffffff4a;font-size:29px}.epic-quick-btn b{display:block;font-size:19px}.epic-quick-btn small{display:block;margin-top:5px;font-size:12px;color:#fff3d6}.epic-arrow{margin-right:auto;font-size:28px;transition:transform .2s}.epic-quick-btn:hover .epic-arrow{transform:translateX(-5px)}#lobbyPanel .epic-quick-btn:disabled{filter:grayscale(.65);opacity:.45!important;box-shadow:none!important}
+.epic-online-counter{padding:8px 12px;border:1px solid #38bdf844;border-radius:12px;background:#0ea5e91a;color:#7dd3fc;font-size:12px;font-weight:900}
+#lobbyPanel .epic-player-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,235px),1fr));gap:14px;margin:0}
+#lobbyPanel .epic-player-grid .player{position:relative;overflow:hidden;min-width:0;padding:19px;border-radius:20px;border:1px solid #a78bfa35;background:linear-gradient(145deg,#282345,#171d35);color:#f8fafc;box-shadow:0 12px 26px #03071240;transition:transform .2s,border-color .2s,box-shadow .2s}
+#lobbyPanel .epic-player-grid .player:before{content:"";position:absolute;top:0;right:0;left:0;height:3px;background:linear-gradient(90deg,#38bdf8,#a78bfa,#fbbf24)}
+#lobbyPanel .epic-player-grid .player:hover{transform:translateY(-4px);border-color:#c4b5fd88;box-shadow:0 18px 32px #03071266}
+#lobbyPanel .epic-player-grid .player-name{display:block;color:#fff!important;font-size:16px;margin-bottom:12px}#lobbyPanel .epic-player-grid .player-name span{display:flex;align-items:center;gap:9px;overflow-wrap:anywhere}
+#lobbyPanel .epic-player-grid .avatar-img{width:42px;height:42px;border:2px solid #fbbf24;background:#312e45}#lobbyPanel .epic-player-grid .avatar-emoji{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#ffffff10;border:1px solid #ffffff20;font-size:26px}
+#lobbyPanel .epic-player-grid .player>div:nth-child(2){color:#aab4cc!important;font-size:12px!important;margin-bottom:12px}
+#lobbyPanel .epic-player-grid .action-btn{border-radius:12px!important;background:linear-gradient(100deg,#059669,#10b981)!important;box-shadow:0 5px 0 #064e3b!important;color:#fff!important;padding:11px!important}
+#lobbyPanel .epic-empty{padding:35px 15px;border:1px dashed #a78bfa55;border-radius:20px;background:#8b5cf60b;color:#fff;text-align:center}.epic-empty-art{font-size:54px;margin-bottom:10px;animation:epicFloat 3s infinite}.epic-empty b{display:block;font-size:18px}.epic-empty p{color:#aab4cc;font-size:13px;margin:8px 0 16px}.epic-empty-pulse{display:block;width:7px;height:7px;margin:auto;border-radius:50%;background:#a78bfa;box-shadow:0 0 0 8px #a78bfa20}
+.epic-lobby-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px;color:#8895b1;font-size:12px}.epic-lobby-footer .epic-back-btn{padding:10px 16px;border:1px solid #ffffff20;border-radius:12px!important;background:#ffffff0b!important;color:#e2e8f0!important;box-shadow:none!important}
+@keyframes epicPulse{50%{box-shadow:0 0 0 8px #34d39908;opacity:.65}}@keyframes epicFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}@keyframes epicOrbit{to{transform:rotate(360deg)}}
+@media(max-width:650px){#lobbyPanel.epic-lobby{border-radius:22px;padding:14px}.epic-lobby-hero{grid-template-columns:1fr;min-height:auto}.epic-hero-art{min-height:170px;grid-row:1}.epic-chicken{width:125px;height:125px;font-size:82px}.epic-orbit{width:175px;height:175px}.orbit-two{width:205px;height:150px}.epic-brand-mark{width:50px;height:50px;font-size:28px}.epic-live-pill{padding:9px 12px}.epic-lobby-footer{align-items:stretch}.epic-lobby-footer .epic-back-btn{width:100%}}
+@media(prefers-reduced-motion:reduce){.epic-chicken,.epic-floating,.epic-orbit,.epic-live-dot,.epic-empty-art{animation:none!important}}
+</style>
 </body>
 </html>
