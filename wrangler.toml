@@ -29,6 +29,7 @@ exclude = [
   "/worker-multi.js",
   "/worker-entry.js",
   "/presence-cleanup.js",
+  "/online-panel.js",
   "/package.json",
   "/package-lock.json",
   "/node_modules/**",
