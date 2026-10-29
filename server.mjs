@@ -50,7 +50,7 @@ const server = http.createServer((req,res) => {
     if (ext === '.html') {
       let html = fs.readFileSync(file, 'utf8');
       if (!/socket\.io\/socket\.io\.js/i.test(html)) html = html.replace(/<\/head>/i, '<script src="/socket.io/socket.io.js"></script></head>');
-      const scripts = ['morgdoni-card-fix.js','request-ui.js','lobby-fix.js','online-panel.js'];
+      const scripts = ['morgdoni-card-fix.js','request-ui.js','lobby-fix.js'];
       const missing = scripts.filter(s => !new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(html));
       if (missing.length) html = html.replace(/<\/body>/i, missing.map(s => `<script src="/${s}"></script>`).join('') + '</body>');
       res.writeHead(200, {'content-type':MIME[ext], 'cache-control':'no-store'}); return res.end(html);
