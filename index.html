@@ -2400,5 +2400,48 @@ document.addEventListener('DOMContentLoaded', function(){
 @media(max-width:650px){#lobbyPanel.epic-lobby{border-radius:22px;padding:14px}.epic-lobby-hero{grid-template-columns:1fr;min-height:auto}.epic-hero-art{min-height:170px;grid-row:1}.epic-chicken{width:125px;height:125px;font-size:82px}.epic-orbit{width:175px;height:175px}.orbit-two{width:205px;height:150px}.epic-brand-mark{width:50px;height:50px;font-size:28px}.epic-live-pill{padding:9px 12px}.epic-lobby-footer{align-items:stretch}.epic-lobby-footer .epic-back-btn{width:100%}}
 @media(prefers-reduced-motion:reduce){.epic-chicken,.epic-floating,.epic-orbit,.epic-live-dot,.epic-empty-art{animation:none!important}}
 </style>
+
+<style id="morgdoni-layout-polish">
+/* Consistent layout, readable controls, and no floating online-players panel. */
+html{scroll-behavior:smooth}
+body{padding:clamp(8px,1.8vw,20px);overflow-x:hidden;background:radial-gradient(ellipse at 50% 0%,#24743b 0%,#124b2a 48%,#0b321f 100%)}
+button,input,textarea,select{font:inherit}
+button{touch-action:manipulation}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #38bdf8;outline-offset:3px}
+.main-container{align-items:flex-start;gap:clamp(10px,1.5vw,20px)}
+.game-area,.chat-area{min-width:0;border-radius:clamp(18px,3vw,34px);box-shadow:0 12px 30px #0003}
+.game-area{padding:clamp(12px,2vw,24px)}
+.chat-area{padding:clamp(12px,1.8vw,20px)}
+.join-panel{border-radius:22px}
+.join-panel input{max-width:100%;min-width:0}
+.players{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px}
+.player{border-radius:22px}
+.chat-messages{border-radius:20px;min-height:180px}
+#liveOnlinePanel,#liveOnlineOpen{display:none!important;visibility:hidden!important;pointer-events:none!important}
+@media(max-width:760px){
+ body{padding:8px}
+ .main-container{display:flex;flex-direction:column;gap:12px}
+ .game-area,.chat-area{width:100%;flex:auto}
+ .join-panel{padding:16px}
+ .join-panel input{width:min(100%,320px);margin:5px 0}
+ .join-panel button{max-width:100%}
+ .players{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:8px}
+ .player{padding:11px}
+ .chat-input-area{gap:7px}
+ .chat-input{min-width:0}
+ .send-btn{padding:0 14px}
+ .welcome-card{width:calc(100% - 28px);padding:25px 18px;border-radius:28px}
+ .welcome-card h1{font-size:clamp(1.6rem,7vw,2.5rem)}
+}
+@media(max-width:380px){
+ .players{grid-template-columns:1fr}
+ .action-btn{padding:8px 10px}
+ .stats{gap:8px;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
 </body>
 </html>
