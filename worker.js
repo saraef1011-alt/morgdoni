@@ -101,7 +101,7 @@ export class GameRoom {
     if(t==='webrtc-offer'||t==='webrtc-answer'||t==='webrtc-ice-candidate'){if(!this.sameRoom(id,d.to))return;const key=t==='webrtc-offer'?'offer':t==='webrtc-answer'?'answer':'candidate';this.send(d.to,t,{from:id,[key]:d[key]});return}
   }
   async alarm(){await this.ready;const now=Date.now();for(const id of Object.keys(this.data.online||{})){const p=this.data.online[id];if(!this.sessions.has(id)){if(p.status!=='disconnected'){p.status='disconnected';p.disconnectedAt=now;p.lastSeen=now}else if(now-(p.disconnectedAt||0)>60000)await cleanupDisconnectedPlayer(this,id)}else if(!p.lastSeen||now-p.lastSeen>35000)await cleanupDisconnectedPlayer(this,id)}this.updateList();await this.save();await this.state.storage.setAlarm(Date.now()+15000)}
-  async close(id){await this.ready;const p=this.data.online?.[id];if(p){p.status='disconnected';p.disconnectedAt=Date.now();p.lastSeen=Date.now();this.updateList();await this.save()}else await cleanupDisconnectedPlayer(this,id)}
+  async close(id){await this.ready;this.sessions.delete(id);const p=this.data.online?.[id];if(p){p.status='disconnected';p.disconnectedAt=Date.now();p.lastSeen=Date.now();this.updateList();await this.save()}else await cleanupDisconnectedPlayer(this,id)}
 }
 
 export default {
