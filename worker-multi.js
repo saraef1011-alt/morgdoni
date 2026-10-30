@@ -1,6 +1,6 @@
 import { GameRoom as BaseGameRoom } from './worker.js';
 
-const MAX_PLAYERS = 50;
+const MAX_PLAYERS = 10;
 
 export class GameRoom extends BaseGameRoom {
   async message(id, raw) {
@@ -61,14 +61,16 @@ export class GameRoom extends BaseGameRoom {
     return super.message(id, raw);
   }
 
-  // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
+  // Keep connected players in the lobby after a match; the base class has
+  // already persisted winner/history/profile statistics in the shared state.
   async finish(r) {
     await super.finish(r);
-    const ids = (r?.players || []).map(p => p.id).filter(Boolean);
-    for (const id of ids) {
-      delete this.data.online[id];
-      delete this.data.pending[id];
-      this.data.queue = (this.data.queue || []).filter(x => x !== id);
+    for (const p of (r?.players || [])) {
+      if (p.isBot) continue;
+      const onlinePlayer = this.data.online[p.id];
+      if (onlinePlayer) onlinePlayer.status = 'ready';
+      this.data.queue = (this.data.queue || []).filter(x => x !== p.id);
+      delete this.data.quickGameSizes?.[p.id];
     }
     this.updateList();
     await this.save();
