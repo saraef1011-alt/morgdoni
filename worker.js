@@ -7,7 +7,7 @@ function createDeck(){const a=[];for(const [t,n] of [['مرغ',21],['خروس',2
 
 export class GameRoom {
   constructor(state){this.state=state;this.sessions=new Map();this.ready=this.load()}
-  async load(){this.data=await this.state.storage.get('data')||{rooms:{},online:{},accounts:{},pending:{},queue:[]};this.data.rooms??={};this.data.online??={};this.data.accounts??={};this.data.pending??={};this.data.queue??=[];this.data.quickGameSizes??={};this.data.online={};this.data.pending={};this.data.queue=[];await this.state.storage.put('data',this.data);try{await this.state.storage.setAlarm(Date.now()+15000)}catch{}}
+  async load(){this.data=await this.state.storage.get('data')||{rooms:{},online:{},accounts:{},pending:{},queue:[]};this.data.rooms??={};this.data.online??={};this.data.accounts??={};this.data.pending??={};this.data.queue??=[];this.data.quickGameSizes??={};this.data.history??=[];this.data.online={};this.data.pending={};this.data.queue=[];await this.state.storage.put('data',this.data);try{await this.state.storage.setAlarm(Date.now()+15000)}catch{}}
   save(){return this.state.storage.put('data',this.data)}
   send(id,type,data){const ws=this.sessions.get(id);if(ws?.readyState===1)ws.send(JSON.stringify({type,data}))}
   broadcast(type,data){for(const id of this.sessions.keys())this.send(id,type,data)}
@@ -15,16 +15,42 @@ export class GameRoom {
   list(){return Object.values(this.data.online).map(p=>({id:p.id,name:p.name,status:p.status,socketId:p.id,avatar:p.avatar||'🐔'}))}
   updateList(){this.broadcast('playerListUpdate',this.list())}
   account(id,name='بازیکن',avatar='🐔'){return this.data.accounts[id]??(this.data.accounts[id]={accountId:id,username:name,avatar,gamesPlayed:0,wins:0,losses:0,createdAt:Date.now()})}
-  player(p){return{id:p.id,name:p.name,accountId:p.accountId||null,avatar:p.avatar||'🐔',hand:[],eggs:0,chicks:0}}
+  player(p){return{id:p.id,name:p.name,accountId:p.accountId||null,avatar:p.avatar||'🐔',isBot:!!p.isBot,hand:[],eggs:0,chicks:0}}
   roomOf(id){for(const [rid,r] of Object.entries(this.data.rooms)){if(r.players?.some(p=>p.id===id))return{roomId:rid,room:r,role:'player'};if(r.watchers?.includes(id))return{roomId:rid,room:r,role:'watcher'}}return null}
   sameRoom(a,b){return Object.values(this.data.rooms).some(r=>r.players?.some(p=>p.id===a)&&r.players?.some(p=>p.id===b))}
   startGame(rid){const r=this.data.rooms[rid];if(!r||r.players.length<2)return false;r.gameStarted=true;r.deck=createDeck();r.discardPile=[];r.eggTokens=18;r.winner=null;r.currentTurn=r.players[0].id;for(const p of r.players){p.hand=[];p.eggs=0;p.chicks=0;for(let i=0;i<4&&r.deck.length;i++)p.hand.push(r.deck.pop());if(this.data.online[p.id])this.data.online[p.id].status='playing'}this.roomBroadcast(r,'gameStarted',{roomId:rid,players:r.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar||'🐔',accountId:p.accountId||null,eggs:p.eggs||0,chicks:p.chicks||0})),state:r});this.roomBroadcast(r,'gameState',r);return true}
   newRoom(a,b,start=true){return this.newRoomMany([a,b],start)}
   newRoomMany(list,start=true){let rid;do{rid=Math.random().toString(36).slice(2,8).toUpperCase()}while(this.data.rooms[rid]);this.data.rooms[rid]={host:list[0].id,players:list.map(p=>this.player(p)),watchers:[],gameStarted:false,deck:createDeck(),eggTokens:18,currentTurn:null,winner:null,discardPile:[]};if(start)this.startGame(rid);return rid}
-  async finish(r){const w=r.players.find(p=>p.chicks>=3);if(!w||r.winner)return;r.winner=w.id;for(const p of r.players){const a=this.account(p.accountId||p.id,p.name,p.avatar);a.gamesPlayed=(a.gamesPlayed||0)+1;if(p.id===w.id)a.wins=(a.wins||0)+1;else a.losses=(a.losses||0)+1;this.send(p.id,'profileData',{profile:a})}}
+  async finish(r){const w=r.players.find(p=>p.chicks>=3);if(!w||r.winner)return;r.winner=w.id;r.finishedAt=Date.now();for(const p of r.players){if(p.isBot)continue;const a=this.account(p.accountId||p.id,p.name,p.avatar);a.gamesPlayed=(a.gamesPlayed||0)+1;if(p.id===w.id)a.wins=(a.wins||0)+1;else a.losses=(a.losses||0)+1;this.send(p.id,'profileData',{profile:a})}this.data.history??=[];this.data.history.unshift({roomId:r.roomId||null,time:r.finishedAt,winnerId:w.id,winnerName:w.name,players:r.players.map(p=>({id:p.id,name:p.name,avatar:p.avatar||'🐔',chicks:p.chicks||0,isBot:!!p.isBot}))});this.data.history=this.data.history.slice(0,100);}
+
+  async runBotTurns(r){
+    let safety=0;
+    while(r&&!r.winner&&safety++<3){
+      const bot=r.players.find(p=>p.id===r.currentTurn&&p.isBot);
+      if(!bot)break;
+      const target=r.players.find(p=>p.id!==bot.id);
+      let done=false;
+      const take=card=>{const i=bot.hand.indexOf(card);if(i<0)return false;bot.hand.splice(i,1);return true};
+      if(bot.eggs>0&&bot.hand.filter(x=>x==='مرغ').length>=2){let n=0;for(let i=0;i<bot.hand.length&&n<2;i++)if(bot.hand[i]==='مرغ'){bot.hand.splice(i,1);i--;n++}bot.eggs--;bot.chicks++;done=true}
+      else if(['مرغ','خروس','لانه'].every(x=>bot.hand.includes(x))&&r.eggTokens>0){for(const x of ['مرغ','خروس','لانه'])take(x);bot.eggs++;r.eggTokens--;done=true}
+      else if(target?.eggs>0&&bot.hand.includes('روباه')){take('روباه');if(target.hand.filter(x=>x==='خروس').length>=2){let n=0;for(let i=0;i<target.hand.length&&n<2;i++)if(target.hand[i]==='خروس'){target.hand.splice(i,1);i--;n++}}else{target.eggs--;bot.eggs++}done=true}
+      else if(target?.eggs>0&&bot.hand.includes('مار')){take('مار');const broken=Math.min(1,target.eggs);target.eggs-=broken;r.eggTokens+=broken;done=true}
+      else if(target?.hand?.length&&bot.hand.includes('تله')){take('تله');target.hand.pop();done=true}
+      else if(r.deck.length){bot.hand.push(r.deck.pop());done=true}
+      else if(r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[];bot.hand.push(r.deck.pop());done=true}
+      else done=true;
+      if(!done)break;
+      while(bot.hand.length<4&&r.deck.length)bot.hand.push(r.deck.pop());
+      await this.finish(r);
+      if(r.winner)break;
+      const i=r.players.findIndex(x=>x.id===r.currentTurn);
+      r.currentTurn=r.players[(i+1)%r.players.length].id;
+    }
+  }
   async fetch(request){await this.ready;if(request.headers.get('Upgrade')!=='websocket')return new Response('WebSocket endpoint',{status:426});const pair=new WebSocketPair();const client=pair[0],ws=pair[1];ws.accept();const id=crypto.randomUUID();this.sessions.set(id,ws);this.send(id,'hello',{id});ws.addEventListener('message',e=>this.message(id,e.data));ws.addEventListener('close',()=>this.close(id));return new Response(null,{status:101,webSocket:client})}
   async message(id,raw){await this.ready;let m;try{m=JSON.parse(raw)}catch{return this.send(id,'error','درخواست نامعتبر است')}const t=m?.type,d=m?.data||{};if(!t)return;const online=this.data.online;if(online[id])online[id].lastSeen=Date.now();if(t==='heartbeat'||t==='ping'){this.send(id,'pong');return;}
     if(t==='loadProfile'){this.send(id,'profileData',{profile:this.data.accounts[d.accountId]||null});return}
+    if(t==='getHistory'){this.send(id,'historyData',{history:(this.data.history||[]).slice(0,20)});return}
     if(t==='saveProfile'){const aid=String(d.accountId||'').trim(),u=String(d.username||'').trim(),av=d.avatar||'🐔';if(!aid||u.length<2||u.length>20)return this.send(id,'profileError','نام کاربری باید بین ۲ تا ۲۰ کاراکتر باشد');if(typeof av!=='string'||av.length>300000)return this.send(id,'profileError','آواتار نامعتبر است یا حجم آن زیاد است');if(Object.values(this.data.accounts).some(a=>a.username===u&&a.accountId!==aid))return this.send(id,'profileError','این نام کاربری قبلاً استفاده شده است');const a=this.account(aid,u,av);a.username=u;a.avatar=av;if(online[id]?.accountId===aid){online[id].name=u;online[id].avatar=av}await this.save();this.send(id,'profileData',{profile:a});this.updateList();return}
     if(t==='registerPlayer'){const aid=String(d.accountId||id),name=String(d.playerName||'بازیکن').trim().slice(0,20)||'بازیکن';if(Object.values(online).some(p=>p.id!==id&&p.name===name))return this.send(id,'registrationError','این نام قبلاً توسط بازیکن دیگری استفاده می‌شود');const a=this.account(aid,name,d.avatar||'🐔');online[id]={id,name:a.username,accountId:aid,avatar:a.avatar||'🐔',status:'ready',lastSeen:Date.now()};this.send(id,'registrationSuccess',{id,name:a.username});this.updateList();await this.save();return}
     if(t==='getPlayerList'){this.send(id,'playerListUpdate',this.list());return}
@@ -33,6 +59,8 @@ export class GameRoom {
     if(t==='acceptGame'){const target=online[id],req=online[d.fromId];if(!target||!req)return this.send(id,'gameError','بازیکن یافت نشد');this.data.pending[id]=(this.data.pending[id]||[]).filter(x=>x.fromId!==d.fromId);const current=this.roomOf(id);if(current?.role==='player'){this.send(id,'busyGameChoice',{fromId:req.id,fromName:req.name,roomId:current.roomId,message:`${req.name} می‌خواهد وارد بازی شما شود`});await this.save();return}const rr=this.roomOf(req.id);if(rr?.role==='player')return this.send(id,'gameError','این بازیکن خودش در یک بازی دیگر است');if(rr?.role==='watcher')rr.room.watchers=rr.room.watchers.filter(x=>x!==req.id);target.status='playing';req.status='playing';this.newRoom(req,target,true);this.updateList();await this.save();return}
     if(t==='chooseGameOption'){const target=online[id],req=online[d.fromId],cur=this.roomOf(id);if(!target||!req||!cur||cur.role!=='player'||!['join','watch'].includes(d.option))return;const r=cur.room;if(d.option==='join'){if(!r.players.some(p=>p.id===req.id)){const rr=this.roomOf(req.id);if(rr?.role==='player')return this.send(id,'gameError','این بازیکن خودش در یک بازی دیگر است');if(rr?.role==='watcher')rr.room.watchers=rr.room.watchers.filter(x=>x!==req.id);const np=this.player(req);for(let i=0;i<4&&r.deck.length;i++)np.hand.push(r.deck.pop());r.players.push(np)}req.status='playing';this.send(req.id,'joinExistingGame',{roomId:cur.roomId,room:r,mode:'player'});this.roomBroadcast(r,'roomUpdate',r);this.roomBroadcast(r,'gameState',r)}else{r.watchers??=[];if(!r.watchers.includes(req.id))r.watchers.push(req.id);req.status='watching';this.send(req.id,'joinExistingGame',{roomId:cur.roomId,room:r,mode:'watcher'});this.roomBroadcast(r,'roomUpdate',r);this.roomBroadcast(r,'gameState',r)}this.updateList();await this.save();return}
     if(t==='rejectGame'){const p=online[id],q=online[d.fromId];this.data.pending[id]=(this.data.pending[id]||[]).filter(x=>x.fromId!==d.fromId);if(p&&p.status==='requested')p.status='ready';if(q&&q.status==='requesting')q.status='ready';this.send(d.fromId,'gameRejected',{byName:p?.name||'بازیکن'});this.updateList();await this.save();return}
+    if(t==='cancelQuickGame'){this.data.queue=(this.data.queue||[]).filter(x=>x!==id);delete this.data.quickGameSizes?.[id];if(online[id]?.status==='requesting')online[id].status='ready';this.updateList();await this.save();this.send(id,'quickGameCancelled',{});return}
+    if(t==='playWithAI'){const p=online[id];if(!p)return this.send(id,'quickGameError','ابتدا نام بازیکن را ثبت کن');if(this.roomOf(id))return this.send(id,'quickGameError','ابتدا از اتاق فعلی خارج شو');const bot={id:'bot-'+crypto.randomUUID(),name:'مرغ‌دونی هوشمند',accountId:null,avatar:'🤖',isBot:true,status:'playing'};p.status='playing';const rid=this.newRoomMany([p,bot],true);const r=this.data.rooms[rid];r.roomId=rid;this.roomBroadcast(r,'gameState',r);this.updateList();await this.save();return}
     if(t==='quickGame'){
       const p=online[id];if(!p)return this.send(id,'quickGameError','بازیکن یافت نشد');
       if(p.status!=='ready')return this.send(id,'quickGameError','ابتدا باید آماده باشید');
@@ -62,7 +90,7 @@ export class GameRoom {
       if(a==='snake'){const i=p.hand.indexOf('مار'),n=Math.min(2,Math.max(1,Number(d.data?.count)||1));if(i>=0&&o?.eggs>0){p.hand.splice(i,1);const broken=Math.min(n,o.eggs);o.eggs-=broken;r.eggTokens+=broken;done=true}}
       if(a==='trap'){const i=p.hand.indexOf('تله'),j=o?.hand.indexOf(d.data?.card);if(i>=0&&j>=0){p.hand.splice(i,1);o.hand.splice(j,1);done=true}}
       if(a==='endTurn')done=true;
-      if(!done)return;while(p.hand.length<4&&r.deck.length)p.hand.push(r.deck.pop());if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[]}await this.finish(r);if(!r.winner){const i=r.players.findIndex(x=>x.id===r.currentTurn);r.currentTurn=r.players[(i+1)%r.players.length].id}this.roomBroadcast(r,'gameState',r);await this.save();return}
+      if(!done)return;while(p.hand.length<4&&r.deck.length)p.hand.push(r.deck.pop());if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[]}await this.finish(r);if(!r.winner){const i=r.players.findIndex(x=>x.id===r.currentTurn);r.currentTurn=r.players[(i+1)%r.players.length].id;await this.runBotTurns(r)}this.roomBroadcast(r,'gameState',r);await this.save();return}
     if(t==='chatMessage'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()],p=r?.players.find(x=>x.id===id);if(!r||!p)return;const msg=String(d.message||'').slice(0,1000);if(!msg)return;this.roomBroadcast(r,'chatMessage',{sender:p.name,message:msg,time:new Date().toLocaleTimeString()});return}
      if(t==='chatSticker'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()],p=r?.players.find(x=>x.id===id);if(!r||!p)return;const msg=String(d.message||'').slice(0,160);if(!msg)return;this.roomBroadcast(r,'chatSticker',{sender:p.name,message:msg,time:new Date().toLocaleTimeString()});return}
     if(t==='chatMedia'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(!r||!d.content)return;const p=r.players.find(x=>x.id===id),watcher=(r.watchers||[]).includes(id);if(!p&&!watcher)return;const kind=String(d.kind||''),content=String(d.content);if(!['file','gif','sticker'].includes(kind)||content.length>7*1024*1024)return;if(kind==='file'&&Number(d.size||0)>5*1024*1024)return;if(kind==='file'&&/\.(exe|bat|cmd|com|scr|msi|ps1|vbs|js)$/i.test(String(d.name||'')))return;if(kind==='gif'&&d.mime&&d.mime!=='image/gif')return;this.roomBroadcast(r,'chatMedia',{sender:p?.name||online[id]?.name||'تماشاگر',kind,content,name:d.name,mime:d.mime,size:d.size,time:new Date().toLocaleTimeString()});return}
