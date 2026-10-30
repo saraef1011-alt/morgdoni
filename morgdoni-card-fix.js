@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 const CARD_IMAGES={'مرغ':'/cards/Hen.png','خروس':'/cards/Rooster.png','لانه':'/cards/Nest.png','روباه':'/cards/Fox.png','تله':'/cards/Trap.png','مار':'/cards/Snake.png'};
-function paintCards(root=document){root.querySelectorAll?.('.card').forEach(el=>{if(el.classList.contains('card-back'))return;const text=String(el.textContent||'');const type=Object.keys(CARD_IMAGES).find(k=>text.includes(k)||el.dataset.card===k);if(!type)return;el.dataset.card=type;let img=el.querySelector('.morgdoni-card-image');if(!img){el.querySelectorAll('span').forEach(x=>x.style.display='none');img=document.createElement('img');img.className='morgdoni-card-image';el.prepend(img);el.classList.add('morg-card-deal');el.addEventListener('animationend',()=>el.classList.remove('morg-card-deal'),{once:true})}img.src=CARD_IMAGES[type]+'?v=5';img.alt=type;img.draggable=false;img.onerror=()=>{img.style.display='none';el.classList.add('morgdoni-image-error')};});}
+function paintCards(root=document){root.querySelectorAll?.('.card').forEach(el=>{if(el.classList.contains('card-back'))return;const text=String(el.textContent||'');const type=Object.keys(CARD_IMAGES).find(k=>text.includes(k)||el.dataset.card===k);if(!type)return;el.dataset.card=type;let img=el.querySelector('.morgdoni-card-image');if(!img){el.querySelectorAll('span').forEach(x=>x.style.display='none');img=document.createElement('img');img.className='morgdoni-card-image';el.prepend(img)}img.src=CARD_IMAGES[type]+'?v=5';img.alt=type;img.draggable=false;img.onerror=()=>{img.style.display='none';el.classList.add('morgdoni-image-error')};});}
 const css=document.createElement('style');css.textContent=`
 :root{--wood:#5b321e;--gold:#f5c45b;--cream:#fff7e8;--green:#1f7a45}
 body{background:radial-gradient(circle at 50% -10%,#4b9b56 0,#216735 35%,#0b321d 100%)!important;background-attachment:fixed!important;padding:12px!important}
@@ -18,7 +18,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;bac
 @media(min-width:1100px){.players{grid-template-columns:repeat(3,minmax(0,1fr))!important}.card{width:88px!important;height:120px!important;min-width:88px!important;min-height:120px!important;max-width:88px!important;max-height:120px!important;flex-basis:88px!important}}
 #morgOnlinePanel,.morg-online-list,.morg-online-row{display:none!important}
 `;
-css.textContent += `\n@keyframes morgCardDeal{0%{opacity:0;transform:translateY(24px) rotate(-7deg) scale(.86)}70%{opacity:1;transform:translateY(-5px) rotate(2deg) scale(1.03)}100%{opacity:1;transform:translateY(0) rotate(0) scale(1)}}.card.morg-card-deal{animation:morgCardDeal .38s cubic-bezier(.2,.75,.2,1) both}.card.morg-card-deal .morgdoni-card-image{animation:morgCardShine .55s ease-out both}@keyframes morgCardShine{0%{filter:brightness(1.35)}100%{filter:brightness(1)}}@media(prefers-reduced-motion:reduce){.card.morg-card-deal,.card.morg-card-deal .morgdoni-card-image{animation:none!important}}`;\ndocument.head.appendChild(css);
+document.head.appendChild(css);
 let socket=null,currentRequest=null,currentBusy=null;
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function modal(title,text,buttons){document.querySelector('.morgdoni-request-overlay')?.remove();const ov=document.createElement('div');ov.className='morgdoni-request-overlay';const box=document.createElement('div');box.className='morgdoni-request-box';box.innerHTML=`<h2>${title}</h2><p>${text}</p><div class="morgdoni-request-actions"></div>`;ov.appendChild(box);document.body.appendChild(ov);const area=box.querySelector('.morgdoni-request-actions');buttons.forEach(b=>{const x=document.createElement('button');x.className='morgdoni-request-btn '+(b.cls||'');x.textContent=b.text;x.onclick=()=>{if(b.keep!==true)ov.remove();b.click?.()};area.appendChild(x)});return ov}
@@ -27,26 +27,17 @@ function watchSocket(){if(window.__MORG_SOCKET__)installSocket(window.__MORG_SOC
 watchSocket();setInterval(watchSocket,300);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>paintCards());else paintCards();new MutationObserver(m=>{for(const a of m)for(const n of a.addedNodes)if(n.nodeType===1){if(n.matches?.('.card'))paintCards(n.parentNode||document);n.querySelectorAll?.('.card').forEach(()=>paintCards(n))}}).observe(document.documentElement,{childList:true,subtree:true});window.MORG_DONI_CARD_IMAGES=CARD_IMAGES;window.MORG_DONI_REQUEST_FIX=true;
 
 /* ===== VS + AUTO START ===== */
-const morgVsShownRooms=new Set();
+let morgVsShown=false;
 let morgAutoStartRooms=new Set();
 function goVS(data){
-  const players=Array.isArray(data?.players)?data.players.slice(0,10):[];
-  if(players.length<2)return;
-  const rid=String(data?.roomId||data?.state?.roomId||window.roomId||'match-'+Date.now());
-  if(morgVsShownRooms.has(rid))return;
-  morgVsShownRooms.add(rid);
-  // Keep the VS sequence in the current page, then continue the card game.
-  if(typeof window.showMorgdoniVS==='function'){
+  if(morgVsShown)return;
+  morgVsShown=true;
+  const players=Array.isArray(data?.players)?data.players.slice(0,2):[];
+  // VS باید داخل همان صفحه اجرا شود؛ انتقال به /vs.html باعث می‌شد
+  // بعد از تمام شدن VS به / برگردیم و بازی کارت‌ها از بین برود.
+  if(typeof window.showMorgdoniVS==='function' && players.length>=2){
     window.showMorgdoniVS(players);
-    return;
   }
-  const old=document.getElementById('morg-vs-overlay');old?.remove();
-  const root=document.createElement('div');root.id='morg-vs-overlay';
-  root.style.cssText='position:fixed;inset:0;z-index:100004;display:grid;place-items:center;padding:18px;background:linear-gradient(135deg,#101827eF,#392115eF);direction:rtl;animation:morgVsFade .25s ease-out';
-  const names=players.map((p,i)=>'<div class="morg-vs-player"><span>'+String(p.avatar||'🐔').replace(/[<>]/g,'')+'</span><b>'+String(p.name||'بازیکن '+(i+1)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</b></div>').join('');
-  root.innerHTML='<style>@keyframes morgVsFade{from{opacity:0}to{opacity:1}}@keyframes morgVsPop{0%{transform:scale(.6) rotate(-5deg);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}#morg-vs-overlay .morg-vs-box{width:min(720px,96vw);padding:clamp(18px,4vw,34px);border:3px solid #f6cf70;border-radius:28px;background:linear-gradient(145deg,#fff4d5,#e7b66b);box-shadow:0 24px 80px #0009;text-align:center;color:#442615;animation:morgVsPop .5s ease-out}#morg-vs-overlay .morg-vs-title{font-size:clamp(24px,5vw,42px);font-weight:1000;margin-bottom:18px}#morg-vs-overlay .morg-vs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}#morg-vs-overlay .morg-vs-player{display:grid;gap:5px;place-items:center;padding:14px 8px;border-radius:18px;background:#fff9e8;border:2px solid #d89a45;box-shadow:0 5px 0 #a96a2e}#morg-vs-overlay .morg-vs-player span{font-size:36px}#morg-vs-overlay .morg-vs-player b{overflow-wrap:anywhere}#morg-vs-overlay .morg-vs-go{margin-top:20px;border:0;border-radius:14px;padding:12px 24px;background:#267d43;color:white;font-weight:900;font-size:16px;cursor:pointer}</style><div class="morg-vs-box"><div class="morg-vs-title">🐔 آماده‌اید؟ <span style="color:#a32920">VS</span> 🦊</div><div class="morg-vs-grid">'+names+'</div><button class="morg-vs-go" type="button">شروع مسابقه!</button></div>';
-  document.body.appendChild(root);root.querySelector('.morg-vs-go').onclick=()=>root.remove();
-  setTimeout(()=>root.remove(),3500);
 }
 function installGameFlow(s){
   if(!s||s.__MORG_VS_FLOW__)return;
