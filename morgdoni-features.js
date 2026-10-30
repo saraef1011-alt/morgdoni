@@ -57,6 +57,7 @@ function localAccount(){const p=profile();if(p.accountId)return p.accountId;cons
 function install(s){if(!s||s.__morgFeaturesInstalled)return;s.__morgFeaturesInstalled=true;sock=s;
 const pr=profile();if(pr.username){s.emit('registerPlayer',{accountId:pr.accountId||localAccount(),playerName:pr.username,avatar:pr.avatar||'🐔'});}
 s.on('hello',d=>{if(d?.id)window.myId=d.id;const p=profile();if(p.username)s.emit('registerPlayer',{accountId:p.accountId||localAccount(),playerName:p.username,avatar:p.avatar||'🐔'});});
+s.on('connect',()=>{const p=profile();if(p.username)s.emit('registerPlayer',{accountId:p.accountId||localAccount(),playerName:p.username,avatar:p.avatar||'🐔'});});
 s.on('roomCreated',d=>{if(d?.roomId){window.roomId=d.roomId;detail('<b>اتاق ساخته شد!</b><div class="mfp-vs"><span>🔐</span><div>کد اتاق<br>'+esc(d.roomId)+'</div></div><button class="mfp-btn gold" id="mfp-copy-code">کپی کد اتاق</button>');const b=document.getElementById('mfp-copy-code');if(b)b.onclick=()=>navigator.clipboard?.writeText(d.roomId).then(()=>b.textContent='کپی شد').catch(()=>{});}});
 s.on('roomJoined',d=>{if(d?.roomId)window.roomId=d.roomId;});
 s.on('joinExistingGame',d=>{if(d?.roomId)window.roomId=d.roomId;});
