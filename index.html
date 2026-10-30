@@ -1903,7 +1903,8 @@ function forceMorgdoniGameView() {
             
             // ساخت کارت‌ها با data attributes به جای onclick
             let handHtml = '';
-            if (isMyTurn) {
+            // کارت‌های دست خود بازیکن همیشه دیده شوند؛ فقط نوبت بازی به فعال بودن دکمه‌ها مربوط است.
+            if (p.id === myId) {
                 handHtml = p.hand.map(c => {
                     const isSelected = (selectedCard === c);
                     return `<div class="card ${isSelected ? 'selected' : ''}" data-card="${c}" data-player-id="${p.id}"><span>${getIcon(c)}</span><br>${c}</div>`;
