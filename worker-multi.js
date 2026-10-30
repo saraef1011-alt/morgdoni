@@ -65,6 +65,7 @@ export class GameRoom extends BaseGameRoom {
   // already persisted winner/history/profile statistics in the shared state.
   async finish(r) {
     await super.finish(r);
+    if (!r?.winner) return;
     for (const p of (r?.players || [])) {
       if (p.isBot) continue;
       const onlinePlayer = this.data.online[p.id];
