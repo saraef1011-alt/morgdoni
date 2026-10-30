@@ -1,6 +1,6 @@
 import { GameRoom as BaseGameRoom } from './worker.js';
 
-const MAX_PLAYERS = 10;
+const MAX_PLAYERS = 50;
 
 export class GameRoom extends BaseGameRoom {
   async message(id, raw) {
@@ -41,7 +41,7 @@ export class GameRoom extends BaseGameRoom {
       const online=this.data.online;
       const p=online[id]||{id,name:String(d.playerName||'بازیکن').slice(0,20)||'بازیکن',accountId:id,avatar:d.avatar||'🐔',status:'ready'};
       online[id]??=p;
-      this.data.rooms[rid]={host:id,players:[this.player(p)],watchers:[],gameStarted:false,deck:createDeck(),eggTokens:18,currentTurn:null,winner:null,discardPile:[],roomId:rid};
+      this.data.rooms[rid]={host:id,players:[this.player(p)],watchers:[],gameStarted:false,deck:createDeck(),eggTokens:18,currentTurn:null,winner:null,discardPile:[]};
       online[id].status='room'; this.send(id,'roomCreated',{roomId:rid}); this.roomBroadcast(this.data.rooms[rid],'roomUpdate',this.data.rooms[rid]); this.updateList(); await this.save(); return;
     }
 
@@ -61,17 +61,14 @@ export class GameRoom extends BaseGameRoom {
     return super.message(id, raw);
   }
 
-  // Keep connected players in the lobby after a match; the base class has
-  // already persisted winner/history/profile statistics in the shared state.
+  // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
   async finish(r) {
     await super.finish(r);
-    if (!r?.winner) return;
-    for (const p of (r?.players || [])) {
-      if (p.isBot) continue;
-      const onlinePlayer = this.data.online[p.id];
-      if (onlinePlayer) onlinePlayer.status = 'ready';
-      this.data.queue = (this.data.queue || []).filter(x => x !== p.id);
-      delete this.data.quickGameSizes?.[p.id];
+    const ids = (r?.players || []).map(p => p.id).filter(Boolean);
+    for (const id of ids) {
+      delete this.data.online[id];
+      delete this.data.pending[id];
+      this.data.queue = (this.data.queue || []).filter(x => x !== id);
     }
     this.updateList();
     await this.save();
