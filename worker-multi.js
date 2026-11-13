@@ -141,8 +141,12 @@ export class GameRoom extends BaseGameRoom {
   // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
   async finish(r) {
     await super.finish(r);
-    const ids = (r?.players || []).map(p => p.id).filter(Boolean);
+    // Base finish() returns without a winner after ordinary turns.
+    // Do not remove players from the online list until the match is truly over.
+    if (!r?.winner) return;
+    const ids = (r.players || []).map(p => p.id).filter(Boolean);
     for (const id of ids) {
+      if (String(id).startsWith('bot-')) continue;
       delete this.data.online[id];
       delete this.data.pending[id];
       this.data.queue = (this.data.queue || []).filter(x => x !== id);
