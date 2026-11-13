@@ -451,12 +451,10 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
         <div class="board-hint">یک کارت انتخاب کنید و اجرا کنید</div>
       </div>
 
-      <div class="media-bar voice-dock">
-        <button class="voice-main" id="micToggleBtn">🎙️ میکروفون</button>
-        <span id="voiceStatus">🎙️ چت صوتی خاموش</span>
-        <audio id="remoteAudio" autoplay playsinline></audio>
-        <div id="remoteMediaBox" style="display:none;margin-top:8px;text-align:center;background:#2b211b;padding:7px;border-radius:14px;color:#ffe6b0;font-size:12px">📡 حریف
-<video id="remoteVideo" autoplay playsinline style="display:none;width:180px;max-width:100%;border-radius:16px;background:#111;margin-top:5px;"></video></div>
+      <audio id="remoteAudio" autoplay playsinline></audio>
+      <div id="remoteMediaBox" style="display:none;margin-top:8px;text-align:center;background:#2b211b;padding:7px;border-radius:14px;color:#ffe6b0;font-size:12px">
+        📡 حریف
+        <video id="remoteVideo" autoplay playsinline style="display:none;width:180px;max-width:100%;border-radius:16px;background:#111;margin-top:5px;"></video>
       </div>
 
       <div id="actionsPanel" class="action-dock" style="display:none;">
@@ -489,27 +487,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
     </div>
   </section>
 
-  <aside class="chat-area ultra-chat">
-    <div class="chat-head"><div><span class="chat-avatar">💬</span><b>چت مرغ‌دونی</b><small>گفت‌وگوی زنده</small></div><span class="online-dot">● آنلاین</span></div>
-    <div class="chat-messages" id="chatMessages"><div class="chat-message system-msg"><span class="chat-sender">🐣 سیستم</span><span class="chat-time">همین الآن</span><br>به چت خوش آمدید! 🎉</div></div>
-    <div class="sticker-title">استیکر و GIF</div>
-    <div class="gif-strip sticker-grid">
-      
-      
-      
-      
-      
-      
-    </div>
-    <div class="gif-display" id="gifDisplay" onclick="randomCenterGif()">🎬 برای GIF کلیک کن!</div>
-    <div class="chat-input-area"><input type="text" class="chat-input" id="chatInput" placeholder="پیامت را بنویس..."><button class="send-btn" id="sendBtn">➤</button></div>
-    <div class="chat-tools">
-<button onclick="showCustomMessage()">😀 استیکر</button>
-<button id="chatMicVisual" onclick="document.getElementById('micToggleBtn')?.click()">🎙️ ویس گروهی</button>
-<button id="botTalkBtn" type="button">🎤 صحبت با ربات</button>
-<label class="file-send-btn">📎 فایل / 🎵 صدا<input id="chatFileInput" type="file" accept="audio/*,image/*,video/*,.gif" hidden></label>
-</div>
-  </aside>
+
 </div>
 
 <script>
@@ -1391,27 +1369,7 @@ function forceMorgdoniGameView() {
                 closeVoiceChat();
             });
 
-            socket.on('chatMessage', (data) => {
-                if (data.sender !== myName) soundChatMsg();
-                addChatMessage(data.sender, data.message, data.time);
-                if (data.sender && /مرغ‌دونِ هوشمند|مرغ‌دونی هوشمند/.test(data.sender)) {
-                    speakBotReply(data.message);
-                }
-            });
-            socket.on('chatSticker', (data) => {
-                if (data && data.sender !== myName) {
-                    soundChatMsg();
-                    showBigMessage(escapeHtml(String(data.message || '😀')), true);
-                }
-            });
-            socket.on('chatMedia', (data) => {
-                if (data.sender !== myName) soundChatMsg();
-                addMediaChatMessage(data);
-                if (data.kind === 'sticker' && data.content) showBigMessage(escapeHtml(String(data.content)), true);
-            });
-
             socket.on('actionDone', (data) => {
-                addChatMessage('🎮 سیستم', `${data.player} ${data.action}`);
                 showBigMessage(`🎮 ${data.player} ${data.action}`, false);
             });
         }
@@ -1953,6 +1911,9 @@ function forceMorgdoniGameView() {
             </div>`;
         });
         container.innerHTML = html;
+        const me = state.players.find(p => p.id === myId);
+        const drawBtn = document.getElementById('drawBtn');
+        if (drawBtn) drawBtn.disabled = !me || state.currentTurn !== myId || (me.hand || []).length >= 4 || !state.deck?.length;
         
         document.getElementById('turnText').innerHTML = state.winner ? '🏁 بازی تمام شد!' : `🎯 نوبت: ${state.players.find(p => p.id === state.currentTurn)?.name || '...'}`; const dc=document.getElementById('deckCountVisual'); if(dc && state.deck) dc.innerText=state.deck.length;
     }
@@ -1998,6 +1959,7 @@ function forceMorgdoniGameView() {
 
     function addChatMessage(sender, msg, time) {
         let chatDiv = document.getElementById('chatMessages');
+        if (!chatDiv) return;
         chatDiv.insertAdjacentHTML('beforeend',
             `<div class="chat-message"><span class="chat-sender">${sender}</span><span class="chat-time">${time || new Date().toLocaleTimeString()}</span><br>${msg}</div>`
         );
@@ -2302,12 +2264,9 @@ function forceMorgdoniGameView() {
             'discardBtn': discardCard,
             'endTurnBtn': endTurnManually,
             'bigMessageBtn': showCustomMessage,
-            'sendBtn': sendChat,
-            'botTalkBtn': toggleBotVoice,
             'editProfileBtn': openProfileEditor,
             'soundToggleBtn': toggleSound,
             'musicToggleBtn': toggleMusic,
-            'micToggleBtn': toggleMic,
                     };
         
         Object.keys(buttonMap).forEach(id => {
@@ -2321,13 +2280,6 @@ function forceMorgdoniGameView() {
             }
         });
         
-        // چت اینپوت
-        const chatInput = document.getElementById('chatInput');
-        if (chatInput) {
-            const newInput = chatInput.cloneNode(true);
-            chatInput.parentNode.replaceChild(newInput, chatInput);
-            newInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChat(); });
-        }
     }
 
     // اجرای setup بعد از بارگذاری صفحه
