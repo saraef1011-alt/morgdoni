@@ -82,59 +82,19 @@ export class GameRoom {
     if(t==='joinRoom'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r)return this.send(id,'roomError','اتاق پیدا نشد');if(r.gameStarted)return this.send(id,'roomError','این بازی شروع شده است');if(r.players.length>=2)return this.send(id,'roomError','اتاق پر است');const p=online[id]||{id,name:String(d.playerName||'بازیکن'),accountId:id,avatar:'🐔'};online[id]??=p;online[id].status='room';r.players.push(this.player(p));this.roomBroadcast(r,'roomUpdate',r);this.updateList();await this.save();return}
     if(t==='startGame'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r||r.host!==id||r.players.length<2)return;this.startGame(rid);await this.save();return}
     if(t==='getGameState'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(r)this.send(id,'gameState',r);return}
-    if(t==='gameAction'){
-      const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];
-      if(!r||!r.gameStarted||r.winner)return;
-      const p=r.players.find(x=>x.id===id);
-      if(!p||r.currentTurn!==id)return;
-      for(const player of r.players) {
-        player.hand ||= [];
-        while(player.hand.length>4) r.discardPile.push(player.hand.pop());
-      }
-      const o=r.players.find(x=>x.id===d.data?.target&&x.id!==id)||r.players.find(x=>x.id!==id);
-      const refill=()=>{
-        if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[];}
-        while(p.hand.length<4&&r.deck.length)p.hand.push(r.deck.pop());
-      };
-      let done=false,a=d.action;
-      if(a==='lay'){
-        const ix=['مرغ','خروس','لانه'].map(x=>p.hand.indexOf(x));
-        if(ix.every(x=>x>=0)&&r.eggTokens>0){ix.sort((x,y)=>y-x).forEach(x=>p.hand.splice(x,1));p.eggs++;r.eggTokens--;done=true;}
-      }
-      if(a==='hatch'&&p.eggs>0&&p.hand.filter(x=>x==='مرغ').length>=2){
-        let n=0;for(let i=0;i<p.hand.length&&n<2;i++)if(p.hand[i]==='مرغ'){p.hand.splice(i,1);i--;n++;}
-        p.eggs--;p.chicks++;done=true;
-      }
-      if(a==='draw'&&p.hand.length<4){
-        if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[];}
-        if(r.deck.length){p.hand.push(r.deck.pop());done=true;}
-      }
-      if(a==='discard'){const i=p.hand.indexOf(d.data?.card);if(i>=0){r.discardPile.push(p.hand.splice(i,1)[0]);done=true;}}
-      if(a==='fox'){
-        const i=p.hand.indexOf('روباه');
-        if(i>=0&&o?.eggs>0){p.hand.splice(i,1);if(o.hand.filter(x=>x==='خروس').length>=2){let n=0;for(let j=0;j<o.hand.length&&n<2;j++)if(o.hand[j]==='خروس'){o.hand.splice(j,1);j--;n++;}}else{o.eggs--;p.eggs++;}done=true;}
-      }
-      if(a==='snake'){
-        const i=p.hand.indexOf('مار'),n=Math.min(2,Math.max(1,Number(d.data?.count)||1));
-        if(i>=0&&o?.eggs>0){p.hand.splice(i,1);const broken=Math.min(n,o.eggs);o.eggs-=broken;r.eggTokens+=broken;done=true;}
-      }
-      if(a==='trap'){
-        const i=p.hand.indexOf('تله'),j=o?.hand.indexOf(d.data?.card);
-        if(i>=0&&j>=0){p.hand.splice(i,1);r.discardPile.push(o.hand.splice(j,1)[0]);done=true;}
-      }
+    if(t==='gameAction'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r||!r.gameStarted||r.winner)return;const p=r.players.find(x=>x.id===id);if(!p||r.currentTurn!==id)return;const o=r.players.find(x=>x.id===d.data?.target&&x.id!==id)||r.players.find(x=>x.id!==id);let done=false,a=d.action;
+      if(a==='lay'){const ix=['مرغ','خروس','لانه'].map(x=>p.hand.indexOf(x));if(ix.every(x=>x>=0)&&r.eggTokens>0){ix.sort((x,y)=>y-x).forEach(x=>p.hand.splice(x,1));p.eggs++;r.eggTokens--;done=true}}
+      if(a==='hatch'&&p.eggs>0&&p.hand.filter(x=>x==='مرغ').length>=2){let n=0;for(let i=0;i<p.hand.length&&n<2;i++)if(p.hand[i]==='مرغ'){p.hand.splice(i,1);i--;n++}p.eggs--;p.chicks++;done=true}
+      if(a==='draw'&&r.deck.length){p.hand.push(r.deck.pop());done=true}
+      if(a==='discard'){const i=p.hand.indexOf(d.data?.card);if(i>=0){r.discardPile.push(p.hand.splice(i,1)[0]);done=true}}
+      if(a==='fox'){const i=p.hand.indexOf('روباه');if(i>=0&&o?.eggs>0){p.hand.splice(i,1);if(o.hand.filter(x=>x==='خروس').length>=2){let n=0;for(let j=0;j<o.hand.length&&n<2;j++)if(o.hand[j]==='خروس'){o.hand.splice(j,1);j--;n++}}else{o.eggs--;p.eggs++}done=true}}
+      if(a==='snake'){const i=p.hand.indexOf('مار'),n=Math.min(2,Math.max(1,Number(d.data?.count)||1));if(i>=0&&o?.eggs>0){p.hand.splice(i,1);const broken=Math.min(n,o.eggs);o.eggs-=broken;r.eggTokens+=broken;done=true}}
+      if(a==='trap'){const i=p.hand.indexOf('تله'),j=o?.hand.indexOf(d.data?.card);if(i>=0&&j>=0){p.hand.splice(i,1);o.hand.splice(j,1);done=true}}
       if(a==='endTurn')done=true;
-      if(!done)return;
-      refill();
-      await this.finish(r);
-      if(!r.winner){
-        const i=r.players.findIndex(x=>x.id===r.currentTurn);
-        r.currentTurn=r.players[(i+1)%r.players.length].id;
-        await this.runBotTurns(r);
-      }
-      this.roomBroadcast(r,'gameState',r);
-      await this.save();
-      return;
-    }
+      if(!done)return;while(p.hand.length<4&&r.deck.length)p.hand.push(r.deck.pop());if(!r.deck.length&&r.discardPile?.length){r.deck=shuffle([...r.discardPile]);r.discardPile=[]}await this.finish(r);if(!r.winner){const i=r.players.findIndex(x=>x.id===r.currentTurn);r.currentTurn=r.players[(i+1)%r.players.length].id;await this.runBotTurns(r)}this.roomBroadcast(r,'gameState',r);await this.save();return}
+    if(t==='chatMessage'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()],p=r?.players.find(x=>x.id===id);if(!r||!p)return;const msg=String(d.message||'').slice(0,1000);if(!msg)return;this.roomBroadcast(r,'chatMessage',{sender:p.name,message:msg,time:new Date().toLocaleTimeString()});return}
+     if(t==='chatSticker'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()],p=r?.players.find(x=>x.id===id);if(!r||!p)return;const msg=String(d.message||'').slice(0,160);if(!msg)return;this.roomBroadcast(r,'chatSticker',{sender:p.name,message:msg,time:new Date().toLocaleTimeString()});return}
+    if(t==='chatMedia'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(!r||!d.content)return;const p=r.players.find(x=>x.id===id),watcher=(r.watchers||[]).includes(id);if(!p&&!watcher)return;const kind=String(d.kind||''),content=String(d.content);if(!['file','gif','sticker'].includes(kind)||content.length>7*1024*1024)return;if(kind==='file'&&Number(d.size||0)>5*1024*1024)return;if(kind==='file'&&/\.(exe|bat|cmd|com|scr|msi|ps1|vbs|js)$/i.test(String(d.name||'')))return;if(kind==='gif'&&d.mime&&d.mime!=='image/gif')return;this.roomBroadcast(r,'chatMedia',{sender:p?.name||online[id]?.name||'تماشاگر',kind,content,name:d.name,mime:d.mime,size:d.size,time:new Date().toLocaleTimeString()});return}
     if(t==='leaveGame'){const cur=this.roomOf(id);if(cur){const r=cur.room;if(cur.role==='player')r.players=r.players.filter(p=>p.id!==id);else r.watchers=(r.watchers||[]).filter(x=>x!==id);if(!r.players.length)delete this.data.rooms[cur.roomId];else{if(r.host===id)r.host=r.players[0].id;if(r.currentTurn===id)r.currentTurn=r.players[0].id;this.roomBroadcast(r,'roomUpdate',r);this.roomBroadcast(r,'gameState',r)}}if(online[id])online[id].status='ready';this.data.queue=this.data.queue.filter(x=>x!==id);this.updateList();await this.save();return}
     if(t==='rematchRequest'){const target=online[d.targetId],req=online[id];if(target&&req)this.send(target.id,'rematchRequest',{fromId:id,fromName:req.name,roomId:d.roomId||null});return}
     if(t==='acceptRematch'){const target=online[id],req=online[d.fromId];if(!target||!req)return;const a=this.roomOf(id),b=this.roomOf(req.id);if(a&&b&&a.roomId===b.roomId)delete this.data.rooms[a.roomId];target.status='playing';req.status='playing';const rid=this.newRoom(req,target,true);this.send(req.id,'rematchAccepted',{roomId:rid});this.updateList();await this.save();return}
