@@ -43,7 +43,7 @@ export class GameRoom extends BaseGameRoom {
       if (!room || !human) return;
       const message = String(d.message || '').trim().slice(0, 500);
       if (!message) return;
-      const bot = room.players.find(p => String(p.id).startsWith('BOT-'));
+      const bot = room.players.find(p => p.isBot);
       this.send(id, 'chatMessage', {
         sender: human.name,
         message,
