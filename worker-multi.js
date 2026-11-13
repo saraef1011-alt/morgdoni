@@ -9,6 +9,90 @@ export class GameRoom extends BaseGameRoom {
     const t = m?.type, d = m?.data || {};
     await this.ready;
 
+    if (t === 'singlePlayer') {
+      const online = this.data.online;
+      const human = online[id] || {
+        id,
+        name: String(d.playerName || 'بازیکن').trim().slice(0, 20) || 'بازیکن',
+        accountId: id,
+        avatar: '🐔',
+        status: 'ready'
+      };
+      online[id] = human;
+      const botId = 'BOT-' + crypto.randomUUID();
+      const bot = {
+        id: botId,
+        name: 'مرغ‌دونِ هوشمند',
+        accountId: botId,
+        avatar: '🤖',
+        status: 'playing'
+      };
+      human.status = 'playing';
+      const roomId = this.newRoom(human, bot, true);
+      this.send(id, 'singlePlayerReady', { roomId, botName: bot.name });
+      this.updateList();
+      await this.save();
+      return;
+    }
+
+    if (t === 'chatMessage') {
+      const current = this.roomOf(id);
+      const room = current?.room;
+      const human = room?.players?.find(p => p.id === id);
+      if (!room || !human) return;
+      const message = String(d.message || '').trim().slice(0, 500);
+      if (!message) return;
+      const bot = room.players.find(p => String(p.id).startsWith('BOT-'));
+      this.send(id, 'chatMessage', {
+        sender: human.name,
+        message,
+        time: new Date().toLocaleTimeString()
+      });
+      if (bot) {
+        const reply = this.botChatReply(message, human.name, room);
+        this.send(id, 'chatMessage', {
+          sender: bot.name,
+          message: reply,
+          time: new Date().toLocaleTimeString()
+        });
+      }
+      return;
+    }
+
+    if (t === 'chatMessage') {
+      const current = this.roomOf(id);
+      const room = current?.room;
+      const human = room?.players?.find(p => p.id === id);
+      if (!room || !human) return;
+      const message = String(d.message || '').trim().slice(0, 500);
+      if (!message) return;
+      const bot = room.players.find(p => String(p.id).startsWith('BOT-'));
+      this.send(id, 'chatMessage', {
+        sender: human.name,
+        message,
+        time: new Date().toLocaleTimeString()
+      });
+      if (bot) {
+        const reply = this.botChatReply(message, human.name, room);
+        this.send(id, 'chatMessage', {
+          sender: bot.name,
+          message: reply,
+          time: new Date().toLocaleTimeString()
+        });
+      }
+      return;
+    }
+
+    if (t === 'gameAction') {
+      await super.message(id, raw);
+      const current = this.roomOf(id);
+      if (current?.room?.gameStarted && !current.room.winner &&
+          String(current.room.currentTurn || '').startsWith('BOT-')) {
+        await this.botTurn(current.roomId);
+      }
+      return;
+    }
+
     if (t === 'joinRoom') {
       const rid = String(d.roomId || '').trim().toUpperCase();
       const r = this.data.rooms[rid];
@@ -59,6 +143,80 @@ export class GameRoom extends BaseGameRoom {
     }
 
     return super.message(id, raw);
+  }
+
+  botChatReply(message, playerName, room) {
+    const text = String(message || '').toLowerCase().replace(/[؟?!.,،]/g, '').trim();
+    const human = room.players.find(p => p.name === playerName);
+    const bot = room.players.find(p => String(p.id).startsWith('BOT-'));
+    const me = bot || {};
+    const replies = [
+      [/^(سلام|درود|hi|hello|hey)/, ['سلام! 😄 آماده‌ای یه بازی حسابی کنیم؟', 'سلام قهرمان مرغ‌دونی! 🐔', 'درود! امروز شانس با کیه؟']],
+      [/(خوبی|چطوری|چه خبر)/, ['من خوبم، ممنون! آماده‌ام برای یه دست هیجان‌انگیز 🤖', 'همه‌چی روبه‌راهه؛ فقط منتظرم حرکت بعدیت رو ببینم!']],
+      [/(اسمت|اسم تو|کی هستی)/, ['من مرغ‌دونِ هوشمندم؛ حریف و هم‌صحبتت توی این بازی! 🤖']],
+      [/(چند تا جوجه|جوجه|امتیاز|کی جلو)/, [`من ${me.chicks || 0} جوجه دارم و تو ${human?.chicks || 0} تا. هنوز بازی ادامه داره! 🐣`]],
+      [/(تخم|تخم گذاشتن)/, ['برای جوجه شدن باید فرصت مناسب رو پیدا کنی. حواست به کارت‌هات باشه! 🥚']],
+      [/(روباه|حمله)/, ['حواست به روباه باشه؛ زمان درست استفاده از کارت‌ها خیلی مهمه! 🦊']],
+      [/(تقلب|قانون|چطور|چجوری|راهنما)/, ['من طبق کارت‌ها و وضعیت همین دست بازی می‌کنم. کارت‌هات رو بررسی کن و حرکت مناسب رو انتخاب کن.']],
+      [/(بردم|برد|باختم|باخت)/, ['هنوز زوده نتیجه بگیریم! تا جوجه سوم، بازی ادامه داره 😎']],
+      [/(خداحافظ|فعلا|بای)/, ['فعلاً! هر وقت برگشتی، یه دست دیگه بازی می‌کنیم 👋']],
+      [/(مرسی|ممنون|دمت گرم)/, ['خواهش می‌کنم! حالا بریم سراغ بازی 😁']]
+    ];
+    for (const [pattern, options] of replies) {
+      if (pattern.test(text)) return options[Math.floor(Math.random() * options.length)];
+    }
+    const fallback = [
+      'جالبه! بیشتر برام تعریف کن 😄',
+      'آها! نظرت درباره حرکت بعدی چیه؟',
+      'دارم گوش می‌دم؛ راستی حواست به کارت‌هات باشه 🐔',
+      'منم همین‌جام! دوست داری درباره بازی حرف بزنیم یا یه گپ معمولی بزنیم؟',
+      'چه جالب! حالا ببینیم توی این دست چه کسی برنده می‌شه 🤖'
+    ];
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+
+  async botTurn(roomId) {
+    const r = this.data.rooms[roomId];
+    if (!r || !r.gameStarted || r.winner) return;
+    const bot = r.players.find(p => p.id === r.currentTurn && String(p.id).startsWith('BOT-'));
+    const human = r.players.find(p => p.id !== bot?.id);
+    if (!bot || !human) return;
+
+    const hand = bot.hand || [];
+    const has = card => hand.includes(card);
+    let action = 'endTurn', data = null;
+
+    // اولویت: برد فوری، ساخت تخم، سپس حمله‌های قانونی و در پایان تعویض کارت
+    if (bot.eggs > 0 && bot.chicks < 3 && hand.filter(x => x === 'مرغ').length >= 2) {
+      action = 'hatch';
+    } else if (r.eggTokens > 0 && has('مرغ') && has('خروس') && has('لانه')) {
+      action = 'lay';
+    } else if (human.eggs > 0 && has('روباه')) {
+      action = 'fox';
+    } else if (human.eggs > 0 && has('مار')) {
+      action = 'snake';
+      data = { count: Math.min(2, human.eggs) };
+    } else if (has('تله') && (human.hand || []).length) {
+      const priority = ['مرغ', 'خروس', 'لانه', 'روباه', 'مار', 'تله'];
+      const targetCard = priority.find(card => human.hand.includes(card)) || human.hand[0];
+      action = 'trap';
+      data = { card: targetCard };
+    } else if (hand.length < 4 && r.deck?.length) {
+      action = 'draw';
+    } else {
+      const counts = hand.reduce((m, c) => (m[c] = (m[c] || 0) + 1, m), {});
+      const discard = ['تله', 'مار', 'روباه', 'لانه', 'خروس', 'مرغ']
+        .find(card => has(card) && !(card === 'مرغ' && counts['مرغ'] >= 2 && bot.eggs > 0));
+      if (discard) {
+        action = 'discard';
+        data = { card: discard };
+      }
+    }
+
+    await super.message(bot.id, JSON.stringify({
+      type: 'gameAction',
+      data: { roomId, action, data }
+    }));
   }
 
   // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
