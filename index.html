@@ -1913,7 +1913,7 @@ function forceMorgdoniGameView() {
         container.innerHTML = html;
         const me = state.players.find(p => p.id === myId);
         const drawBtn = document.getElementById('drawBtn');
-        if (drawBtn) drawBtn.disabled = !me || state.currentTurn !== myId || (me.hand || []).length >= 4 || !state.deck?.length;
+        if (drawBtn) drawBtn.disabled = !me || state.currentTurn !== myId || (me.hand || []).length >= 4 || (!state.deck?.length && !state.discardPile?.length);
         
         document.getElementById('turnText').innerHTML = state.winner ? '🏁 بازی تمام شد!' : `🎯 نوبت: ${state.players.find(p => p.id === state.currentTurn)?.name || '...'}`; const dc=document.getElementById('deckCountVisual'); if(dc && state.deck) dc.innerText=state.deck.length;
     }
