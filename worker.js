@@ -11,7 +11,7 @@ export class GameRoom {
   save(){return this.state.storage.put('data',this.data)}
   send(id,type,data){const ws=this.sessions.get(id);if(ws?.readyState===1)ws.send(JSON.stringify({type,data}))}
   broadcast(type,data){for(const id of this.sessions.keys())this.send(id,type,data)}
-  roomBroadcast(r,type,data){if(!r)return;if(type==='gameState'){r.discardPile??=[];for(const p of r.players||[]){p.hand??=[];while(p.hand.length>4)r.discardPile.push(p.hand.pop());}data=r;}for(const p of r.players||[])this.send(p.id,type,data);for(const id of r.watchers||[])this.send(id,type,data)}
+  roomBroadcast(r,type,data){if(!r)return;for(const p of r.players||[])this.send(p.id,type,data);for(const id of r.watchers||[])this.send(id,type,data)}
   list(){return Object.values(this.data.online).map(p=>({id:p.id,name:p.name,status:p.status,socketId:p.id,avatar:p.avatar||'🐔'}))}
   updateList(){this.broadcast('playerListUpdate',this.list())}
   account(id,name='بازیکن',avatar='🐔'){return this.data.accounts[id]??(this.data.accounts[id]={accountId:id,username:name,avatar,gamesPlayed:0,wins:0,losses:0,createdAt:Date.now()})}
@@ -81,7 +81,7 @@ export class GameRoom {
     if(t==='createRoom'){const rid=String(d.roomId||Math.random().toString(36).slice(2,8)).toUpperCase();if(this.data.rooms[rid])return this.send(id,'roomError','اتاق قبلاً وجود دارد');const p=online[id]||{id,name:String(d.playerName||'بازیکن'),accountId:id,avatar:'🐔'};online[id]??=p;this.data.rooms[rid]={host:id,players:[this.player(p)],watchers:[],gameStarted:false,deck:createDeck(),eggTokens:18,currentTurn:null,winner:null,discardPile:[]};online[id].status='room';this.send(id,'roomCreated',{roomId:rid});this.roomBroadcast(this.data.rooms[rid],'roomUpdate',this.data.rooms[rid]);this.updateList();await this.save();return}
     if(t==='joinRoom'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r)return this.send(id,'roomError','اتاق پیدا نشد');if(r.gameStarted)return this.send(id,'roomError','این بازی شروع شده است');if(r.players.length>=2)return this.send(id,'roomError','اتاق پر است');const p=online[id]||{id,name:String(d.playerName||'بازیکن'),accountId:id,avatar:'🐔'};online[id]??=p;online[id].status='room';r.players.push(this.player(p));this.roomBroadcast(r,'roomUpdate',r);this.updateList();await this.save();return}
     if(t==='startGame'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r||r.host!==id||r.players.length<2)return;this.startGame(rid);await this.save();return}
-    if(t==='getGameState'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(r){r.discardPile??=[];for(const p of r.players||[]){p.hand??=[];while(p.hand.length>4)r.discardPile.push(p.hand.pop());}this.send(id,'gameState',r)}return}
+    if(t==='getGameState'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(r)this.send(id,'gameState',r);return}
     if(t==='gameAction'){
       const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];
       if(!r||!r.gameStarted||r.winner)return;
