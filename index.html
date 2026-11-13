@@ -1436,12 +1436,19 @@ function forceMorgdoniGameView() {
         if (!name) { alert('اول نام خودت را وارد کن'); return; }
         myName = name;
         if (!socket) connectSocket();
-        setTimeout(() => {
-            if (!socket) return;
-            socket.emit('singlePlayer', { playerName: name });
+
+        const launchSoloGame = () => {
+            if (!socket || !socket.id) return;
+            myId = socket.id;
+            window.myId = myId;
             updateStatus('🤖 در حال آماده‌سازی حریف هوشمند...');
             document.getElementById('roomStatus').innerHTML = '🤖 در حال ساخت بازی تک‌نفره...';
-        }, 350);
+            socket.emit('singlePlayer', { playerName: name });
+        };
+
+        // تا دریافت شناسه واقعی اتصال صبر می‌کنیم؛ وگرنه UI بازیکن خودش را پیدا نمی‌کند.
+        if (socket && socket.id) launchSoloGame();
+        else if (socket) socket.once('hello', launchSoloGame);
     }
 
     function joinRoom() {
