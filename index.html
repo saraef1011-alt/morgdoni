@@ -1097,7 +1097,16 @@ function forceMorgdoniGameView() {
     function connectSocket() {
         if (socket) return;
         socket = io();
-        
+
+        // WebSocket ابتدا connect و سپس hello می‌فرستد؛ در بازی تک‌نفره
+        // registrationSuccess نداریم، پس شناسه باید از hello هم در متغیر اصلی ثبت شود.
+        socket.on('hello', (data) => {
+            if (data && data.id) {
+                myId = data.id;
+                window.myId = data.id;
+            }
+        });
+
         // جلوگیری از ثبت چندباره listenerها
         if (!socketListenersAttached) {
             socketListenersAttached = true;
