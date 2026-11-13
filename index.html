@@ -714,12 +714,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
             class: 'purple',
             action: () => { 
                 let msg = `${s.emoji} ${s.text}`;
-                addChatMessage(myName || 'شما', msg);
                 showBigMessage(msg, true);
-                if (socket && roomId) {
-                    socket.emit('chatMessage', { roomId, message: msg });
-                    socket.emit('chatSticker', { roomId, message: msg });
-                }
                 closeModal();
             } 
         }));
@@ -1957,76 +1952,6 @@ function forceMorgdoniGameView() {
         }
     }
 
-    function addChatMessage(sender, msg, time) {
-        let chatDiv = document.getElementById('chatMessages');
-        if (!chatDiv) return;
-        chatDiv.insertAdjacentHTML('beforeend',
-            `<div class="chat-message"><span class="chat-sender">${sender}</span><span class="chat-time">${time || new Date().toLocaleTimeString()}</span><br>${msg}</div>`
-        );
-        chatDiv.scrollTop = chatDiv.scrollHeight;
-    }
-
-    function addMediaChatMessage(data) {
-        const chatDiv=document.getElementById('chatMessages');
-        if(!chatDiv) return;
-        const safeName=String(data.name||'فایل').replace(/[<>&"]/g,'');
-        let body='';
-        if(data.kind==='file'){
-            if((data.mime||'').startsWith('audio/') && data.content){
-                const audioMime=String(data.mime).replace(/"/g,'');
-                body=`<audio controls preload="metadata" style="width:100%;margin-top:8px;border-radius:12px;"><source src="${data.content}" type="${audioMime}"></audio>`;
-            } else if((data.mime||'').startsWith('image/') && data.content){
-                body=`<img src="${data.content}" alt="${safeName}" loading="lazy" style="max-width:100%;max-height:260px;width:auto;height:auto;object-fit:contain;border-radius:12px;display:block;margin:8px auto;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=&quot;color:#b91c1c&quot;>تصویر بارگذاری نشد؛ فایل را دوباره بفرست.</span>')">`;
-            }
-            body += `<a href="${data.content}" download="${safeName}" style="display:block;margin-top:6px;">📎 ${safeName} — دریافت فایل</a>`;
-        } else if(data.kind==='gif'){
-            body=`<img src="${data.content}" alt="GIF" style="max-width:100%;max-height:260px;border-radius:14px;display:block;margin-top:6px;object-fit:contain;">`;
-        } else if(data.kind==='sticker'){
-            body=`<div style="font-size:42px;text-align:center;margin-top:6px;">${String(data.content||'😀')}</div>`;
-        }
-        chatDiv.insertAdjacentHTML('beforeend',
-          `<div class="chat-message"><span class="chat-sender">${String(data.sender||'بازیکن').replace(/[<>&"]/g,'')}</span><span class="chat-time">${data.time||new Date().toLocaleTimeString()}</span><br>${body}</div>`
-        );
-        chatDiv.scrollTop=chatDiv.scrollHeight;
-    }
-
-    async function sendSharedGif() {
-        if (!socket || !roomId) { alert('ابتدا وارد بازی شو.'); return; }
-        try {
-            const response = await fetch('/assets/chat/chicken.gif', { cache: 'no-store' });
-            const blob = await response.blob();
-            if (blob.size > 700 * 1024) { alert('GIF بیش از حد بزرگ است.'); return; }
-            const reader = new FileReader();
-            reader.onload = () => {
-                socket.emit('chatMedia', {
-                    roomId, kind: 'gif', content: reader.result,
-                    name: 'chicken.gif', mime: 'image/gif', size: blob.size
-                });
-            };
-            reader.readAsDataURL(blob);
-        } catch (e) {
-            console.error(e);
-            alert('ارسال GIF انجام نشد.');
-        }
-    }
-
-    function sendFileToChat(file) {
-        if (!socket || !roomId) { alert('ابتدا وارد بازی شو.'); return; }
-        const max = 5 * 1024 * 1024;
-        if (file.size > max) { alert('حداکثر حجم فایل ۵ مگابایت است.'); return; }
-        const blocked = /\.(exe|bat|cmd|com|scr|msi|ps1|vbs|js)$/i.test(file.name);
-        if (blocked) { alert('این نوع فایل برای امنیت مجاز نیست.'); return; }
-        const reader = new FileReader();
-        reader.onload = () => {
-            socket.emit('chatMedia', {
-                roomId, kind: 'file', content: reader.result,
-                name: file.name, mime: file.type || 'application/octet-stream', size: file.size
-            });
-        };
-        reader.onerror = () => alert('خواندن فایل ناموفق بود.');
-        reader.readAsDataURL(file);
-    }
-
     function sendAction(action, data, actionName) {
         if (!socket) { addLog('❌ به سرور متصل نیستی!'); return; }
         if (!roomId) { addLog('❌ هنوز وارد اتاق نشدی!'); return; }
@@ -2341,12 +2266,7 @@ function forceMorgdoniGameView() {
 })();
 </script>
 
-<script id="morgdoni-media-controls">
-document.addEventListener('DOMContentLoaded', function(){
- const fi=document.getElementById('chatFileInput');
- if(fi) fi.addEventListener('change',function(){ if(this.files[0]) sendFileToChat(this.files[0]); this.value=''; });
-});
-</script>
+
 
 <style id="morgdoni-epic-lobby">
 /* One definitive, redesigned lobby. Legacy floating online panel is retired visually. */
