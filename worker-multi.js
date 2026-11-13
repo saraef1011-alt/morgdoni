@@ -10,30 +10,20 @@ export class GameRoom extends BaseGameRoom {
     await this.ready;
 
     if (t === 'singlePlayer') {
-      const online = this.data.online;
-      const human = online[id] || {
+      // Use the exact same bot setup and turn engine as the base worker.
+      const player = this.data.online[id] || {
         id,
         name: String(d.playerName || 'بازیکن').trim().slice(0, 20) || 'بازیکن',
         accountId: id,
         avatar: '🐔',
         status: 'ready'
       };
-      online[id] = human;
-      const botId = 'bot-' + crypto.randomUUID();
-      const bot = {
-        id: botId,
-        name: 'مرغ‌دونِ هوشمند',
-        accountId: null,
-        avatar: '🤖',
-        isBot: true,
-        status: 'playing'
-      };
-      human.status = 'playing';
-      const roomId = this.newRoom(human, bot, true);
-      this.send(id, 'singlePlayerReady', { roomId, botName: bot.name });
-      this.updateList();
-      await this.save();
-      return;
+      this.data.online[id] = player;
+      player.status = 'ready';
+      return super.message(id, JSON.stringify({
+        type: 'playWithAI',
+        data: {}
+      }));
     }
 
     if (t === 'chatMessage') {
