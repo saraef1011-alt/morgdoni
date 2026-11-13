@@ -9,6 +9,42 @@ export class GameRoom extends BaseGameRoom {
     const t = m?.type, d = m?.data || {};
     await this.ready;
 
+    if (t === 'singlePlayer') {
+      const online = this.data.online;
+      const human = online[id] || {
+        id,
+        name: String(d.playerName || 'بازیکن').trim().slice(0, 20) || 'بازیکن',
+        accountId: id,
+        avatar: '🐔',
+        status: 'ready'
+      };
+      online[id] = human;
+      const botId = 'BOT-' + crypto.randomUUID();
+      const bot = {
+        id: botId,
+        name: 'مرغ‌دونِ هوشمند',
+        accountId: botId,
+        avatar: '🤖',
+        status: 'playing'
+      };
+      human.status = 'playing';
+      const roomId = this.newRoom(human, bot, true);
+      this.send(id, 'singlePlayerReady', { roomId, botName: bot.name });
+      this.updateList();
+      await this.save();
+      return;
+    }
+
+    if (t === 'gameAction') {
+      await super.message(id, raw);
+      const current = this.roomOf(id);
+      if (current?.room?.gameStarted && !current.room.winner &&
+          String(current.room.currentTurn || '').startsWith('BOT-')) {
+        await this.botTurn(current.roomId);
+      }
+      return;
+    }
+
     if (t === 'joinRoom') {
       const rid = String(d.roomId || '').trim().toUpperCase();
       const r = this.data.rooms[rid];
@@ -59,6 +95,50 @@ export class GameRoom extends BaseGameRoom {
     }
 
     return super.message(id, raw);
+  }
+
+  async botTurn(roomId) {
+    const r = this.data.rooms[roomId];
+    if (!r || !r.gameStarted || r.winner) return;
+    const bot = r.players.find(p => p.id === r.currentTurn && String(p.id).startsWith('BOT-'));
+    const human = r.players.find(p => p.id !== bot?.id);
+    if (!bot || !human) return;
+
+    const hand = bot.hand || [];
+    const has = card => hand.includes(card);
+    let action = 'endTurn', data = null;
+
+    // اولویت: برد فوری، ساخت تخم، سپس حمله‌های قانونی و در پایان تعویض کارت
+    if (bot.eggs > 0 && bot.chicks < 3 && hand.filter(x => x === 'مرغ').length >= 2) {
+      action = 'hatch';
+    } else if (r.eggTokens > 0 && has('مرغ') && has('خروس') && has('لانه')) {
+      action = 'lay';
+    } else if (human.eggs > 0 && has('روباه')) {
+      action = 'fox';
+    } else if (human.eggs > 0 && has('مار')) {
+      action = 'snake';
+      data = { count: Math.min(2, human.eggs) };
+    } else if (has('تله') && (human.hand || []).length) {
+      const priority = ['مرغ', 'خروس', 'لانه', 'روباه', 'مار', 'تله'];
+      const targetCard = priority.find(card => human.hand.includes(card)) || human.hand[0];
+      action = 'trap';
+      data = { card: targetCard };
+    } else if (hand.length < 4 && r.deck?.length) {
+      action = 'draw';
+    } else {
+      const counts = hand.reduce((m, c) => (m[c] = (m[c] || 0) + 1, m), {});
+      const discard = ['تله', 'مار', 'روباه', 'لانه', 'خروس', 'مرغ']
+        .find(card => has(card) && !(card === 'مرغ' && counts['مرغ'] >= 2 && bot.eggs > 0));
+      if (discard) {
+        action = 'discard';
+        data = { card: discard };
+      }
+    }
+
+    await super.message(bot.id, JSON.stringify({
+      type: 'gameAction',
+      data: { roomId, action, data }
+    }));
   }
 
   // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
