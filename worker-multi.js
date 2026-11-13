@@ -110,8 +110,7 @@ export class GameRoom extends BaseGameRoom {
   }
 
   async botChatReply(message, playerName, room) {
-    const human = room.players.find(p => p.id === this.roomOf(p.id)?.room?.players?.find(x => x.id === p.id)?.id && p.name === playerName)
-      || room.players.find(p => p.name === playerName);
+    const human = room.players.find(p => p.name === playerName);
     const bot = room.players.find(p => p.isBot) || {};
     const history = Array.isArray(room.botChatHistory) ? room.botChatHistory.slice(-8) : [];
     const gameState = {
