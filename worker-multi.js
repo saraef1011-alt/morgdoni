@@ -3,6 +3,8 @@ import { GameRoom as BaseGameRoom } from './worker.js';
 const MAX_PLAYERS = 50;
 
 export class GameRoom extends BaseGameRoom {
+  constructor(state, env) { super(state); this.env = env; }
+
   async message(id, raw) {
     let m;
     try { m = JSON.parse(raw); } catch { return this.send(id, 'error', 'درخواست نامعتبر است'); }
@@ -40,7 +42,7 @@ export class GameRoom extends BaseGameRoom {
         time: new Date().toLocaleTimeString()
       });
       if (bot) {
-        const reply = this.botChatReply(message, human.name, room);
+        const reply = await this.botChatReply(message, human.name, room);
         this.send(id, 'chatMessage', {
           sender: bot.name,
           message: reply,
@@ -107,34 +109,61 @@ export class GameRoom extends BaseGameRoom {
     return super.message(id, raw);
   }
 
-  botChatReply(message, playerName, room) {
-    const text = String(message || '').toLowerCase().replace(/[؟?!.,،]/g, '').trim();
-    const human = room.players.find(p => p.name === playerName);
-    const bot = room.players.find(p => String(p.id).startsWith('BOT-'));
-    const me = bot || {};
-    const replies = [
-      [/^(سلام|درود|hi|hello|hey)/, ['سلام! 😄 آماده‌ای یه بازی حسابی کنیم؟', 'سلام قهرمان مرغ‌دونی! 🐔', 'درود! امروز شانس با کیه؟']],
-      [/(خوبی|چطوری|چه خبر)/, ['من خوبم، ممنون! آماده‌ام برای یه دست هیجان‌انگیز 🤖', 'همه‌چی روبه‌راهه؛ فقط منتظرم حرکت بعدیت رو ببینم!']],
-      [/(اسمت|اسم تو|کی هستی)/, ['من مرغ‌دونِ هوشمندم؛ حریف و هم‌صحبتت توی این بازی! 🤖']],
-      [/(چند تا جوجه|جوجه|امتیاز|کی جلو)/, [`من ${me.chicks || 0} جوجه دارم و تو ${human?.chicks || 0} تا. هنوز بازی ادامه داره! 🐣`]],
-      [/(تخم|تخم گذاشتن)/, ['برای جوجه شدن باید فرصت مناسب رو پیدا کنی. حواست به کارت‌هات باشه! 🥚']],
-      [/(روباه|حمله)/, ['حواست به روباه باشه؛ زمان درست استفاده از کارت‌ها خیلی مهمه! 🦊']],
-      [/(تقلب|قانون|چطور|چجوری|راهنما)/, ['من طبق کارت‌ها و وضعیت همین دست بازی می‌کنم. کارت‌هات رو بررسی کن و حرکت مناسب رو انتخاب کن.']],
-      [/(بردم|برد|باختم|باخت)/, ['هنوز زوده نتیجه بگیریم! تا جوجه سوم، بازی ادامه داره 😎']],
-      [/(خداحافظ|فعلا|بای)/, ['فعلاً! هر وقت برگشتی، یه دست دیگه بازی می‌کنیم 👋']],
-      [/(مرسی|ممنون|دمت گرم)/, ['خواهش می‌کنم! حالا بریم سراغ بازی 😁']]
-    ];
-    for (const [pattern, options] of replies) {
-      if (pattern.test(text)) return options[Math.floor(Math.random() * options.length)];
+  async botChatReply(message, playerName, room) {
+    const human = room.players.find(p => p.id === this.roomOf(p.id)?.room?.players?.find(x => x.id === p.id)?.id && p.name === playerName)
+      || room.players.find(p => p.name === playerName);
+    const bot = room.players.find(p => p.isBot) || {};
+    const history = Array.isArray(room.botChatHistory) ? room.botChatHistory.slice(-8) : [];
+    const gameState = {
+      players: (room.players || []).map(p => ({
+        name: p.name,
+        isBot: !!p.isBot,
+        eggs: p.eggs || 0,
+        chicks: p.chicks || 0,
+        handCount: (p.hand || []).length
+      })),
+      eggTokens: room.eggTokens,
+      currentTurn: room.players?.find(p => p.id === room.currentTurn)?.name || null,
+      winner: room.players?.find(p => p.id === room.winner)?.name || null
+    };
+    const system = [
+      'تو مرغ‌دونِ هوشمند هستی؛ ربات حریف و هم‌صحبت بازی مرغ‌دونی.',
+      'همیشه به فارسی روان، دوستانه، کوتاه و طبیعی جواب بده.',
+      'می‌توانی درباره بازی و موضوعات معمولی گفتگو کنی.',
+      'قوانین یا وضعیت بازی را جعل نکن؛ فقط از اطلاعات وضعیت بازی استفاده کن.',
+      'کارت‌های مخفی و محتوای دست بازیکنان را افشا نکن.',
+      'اگر سؤال درباره قوانین دقیق بازی است و مطمئن نیستی، صادقانه بگو مطمئن نیستی.',
+      'حداکثر در ۲ جمله پاسخ بده و از ایموجی کم استفاده کن.'
+    ].join(' ');
+    try {
+      if (!this.env?.AI?.run) throw new Error('AI binding unavailable');
+      const messages = [
+        { role: 'system', content: system + '\nوضعیت فعلی بازی: ' + JSON.stringify(gameState) },
+        ...history,
+        { role: 'user', content: String(playerName || 'بازیکن') + ' می‌گوید: ' + String(message || '').slice(0, 500) }
+      ];
+      const result = await this.env.AI.run('@cf/openai/gpt-oss-20b', {
+        messages,
+        max_tokens: 180,
+        temperature: 0.7
+      });
+      let reply = result?.output_text || result?.response || result?.result?.response || '';
+      if (!reply && Array.isArray(result?.output)) {
+        reply = result.output.flatMap(x => x.content || []).map(x => x.text || '').join(' ');
+      }
+      reply = String(reply || '').trim().slice(0, 700);
+      if (!reply) throw new Error('Empty AI response');
+      room.botChatHistory = [
+        ...history,
+        { role: 'user', content: String(message || '').slice(0, 500) },
+        { role: 'assistant', content: reply }
+      ].slice(-10);
+      this.save().catch(() => {});
+      return reply;
+    } catch (error) {
+      console.error('Morgdoni AI chat error:', error);
+      return 'فعلاً مغزم یه کم قاطی کرده! 😅 دوباره بهم پیام بده.';
     }
-    const fallback = [
-      'جالبه! بیشتر برام تعریف کن 😄',
-      'آها! نظرت درباره حرکت بعدی چیه؟',
-      'دارم گوش می‌دم؛ راستی حواست به کارت‌هات باشه 🐔',
-      'منم همین‌جام! دوست داری درباره بازی حرف بزنیم یا یه گپ معمولی بزنیم؟',
-      'چه جالب! حالا ببینیم توی این دست چه کسی برنده می‌شه 🤖'
-    ];
-    return fallback[Math.floor(Math.random() * fallback.length)];
   }
 
 
