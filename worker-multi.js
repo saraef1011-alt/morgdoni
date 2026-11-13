@@ -110,60 +110,131 @@ export class GameRoom extends BaseGameRoom {
   }
 
   async botChatReply(message, playerName, room) {
-    const human = room.players.find(p => p.name === playerName);
+    const human = room.players.find(p => p.name === playerName) || {};
     const bot = room.players.find(p => p.isBot) || {};
-    const history = Array.isArray(room.botChatHistory) ? room.botChatHistory.slice(-8) : [];
-    const gameState = {
-      players: (room.players || []).map(p => ({
-        name: p.name,
-        isBot: !!p.isBot,
-        eggs: p.eggs || 0,
-        chicks: p.chicks || 0,
-        handCount: (p.hand || []).length
-      })),
-      eggTokens: room.eggTokens,
-      currentTurn: room.players?.find(p => p.id === room.currentTurn)?.name || null,
-      winner: room.players?.find(p => p.id === room.winner)?.name || null
+    const raw = String(message || '').trim().slice(0, 500);
+    const text = raw.toLowerCase().replace(/[؟?!.,،؛:]/g, ' ').replace(/\s+/g, ' ').trim();
+    const pick = list => list[Math.floor(Math.random() * list.length)];
+    const bank = [
+      [/^(سلام|درود|hi|hello|hey|صبح بخیر|عصر بخیر|شب بخیر)/, ['سلام! بالاخره اومدی؛ آماده‌ای رقابت کنیم؟ 🐔','درود رفیق بازی! امروز قراره حسابی بجنگیم 😄','سلام! امیدوارم دستت پر از کارت‌های خوب باشه.','سلام! من آماده‌ام؛ تو چطوری؟']],
+      [/(خوبی|چطوری|چه خبر|حالت چطوره)/, ['من عالی‌ام و برای بردن آماده‌ام! تو چطوری؟','همه‌چی روبه‌راهه؛ فقط منتظرم ببینم چه نقشه‌ای داری!','خوبم، ممنون که پرسیدی. اوضاع بازی چطوره؟']],
+      [/(اسمت|اسم تو|کی هستی|تو چی هستی)/, ['من مرغ‌دونی هوشمندم؛ حریف دیجیتالی تو! 🤖','اسمم مرغ‌دونی هوشمنده؛ هم بازی می‌کنم، هم گپ می‌زنم!']],
+      [/(چند تا جوجه|جوجه|امتیاز|کی جلو|وضعیت بازی|چند چند)/, [`الان من ${bot.chicks || 0} جوجه و تو ${human.chicks || 0} جوجه داری. هنوز چیزی معلوم نیست!`, `امتیاز من ${bot.chicks || 0} و امتیاز تو ${human.chicks || 0} جوجه است. بازی ادامه داره!`]],
+      [/(تخم|تخم مرغ|لانه|تخم گذاشتن)/, ['برای تخم گذاشتن باید مرغ، خروس و لانه رو کنار هم داشته باشی. حواست به کارت‌هات باشه!','تخم‌ها خیلی مهمن؛ ولی مراقب روباه و مار هم باش! 🥚']],
+      [/(جوجه کردن|جوجه کنم|هچ|درآوردن جوجه)/, ['وقتی تخم داری و دو کارت مرغ دستته، می‌تونی جوجه بگیری. 🐣','هدف اصلی رسیدن به سه جوجه است؛ فرصت مناسب رو از دست نده!']],
+      [/(روباه|حمله|دزدیدن|دزدید)/, ['روباه می‌تونه اوضاع رو عوض کنه؛ مخصوصاً وقتی حریف تخم داشته باشه! 🦊','مواظب روباه باش؛ من هم همیشه چشمم به تخم‌هات هست!']],
+      [/(مار|شکستن تخم)/, ['مار برای خراب کردن تخم‌های حریف خطرناکه؛ مراقبش باش! 🐍','اگه تخم داری، حواست به مار باشه.']],
+      [/(تله|دام)/, ['تله می‌تونه یکی از کارت‌های حریف رو از بین ببره. زمان استفاده‌اش مهمه!','تله رو دست‌کم نگیر؛ گاهی یه کارت می‌تونه کل نقشه رو عوض کنه.']],
+      [/(کارت|دستت|دستم|چی داری|چه کارت)/, ['کارت‌های دستم محرمانه‌ان! 😄 باید از روی حرکت‌هام حدس بزنی.','راز کارت‌هام رو که نمی‌گم! این خودش بخشی از هیجان بازیه.']],
+      [/(قانون|چطور|چجوری|راهنما|یاد بده|یادگیری)/, ['ترکیب مرغ، خروس و لانه برای گرفتن تخم مهمه؛ با دو مرغ و یک تخم هم جوجه می‌گیری.','کارت‌ها رو هوشمندانه نگه دار؛ برای سه جوجه باید برنامه‌ریزی کنی.']],
+      [/(تقلب|کلک)/, ['نه نه! اینجا فقط فکر و برنامه‌ریزی جواب می‌ده! 😎','من طبق قوانین بازی می‌کنم؛ برد واقعی باهوشانه‌ست!']],
+      [/(بردم|برنده|می برم|میبرم)/, ['هنوز جشن نگیر! تا رسیدن به سه جوجه بازی ادامه داره!','اعتمادبه‌نفس خوبه، ولی منم هنوز توی رقابتم! 😁']],
+      [/(باختم|باختی|باخت)/, ['هنوز فرصت جبران هست؛ یه حرکت خوب می‌تونه بازی رو برگردونه.','بازی همینه؛ از هر دست می‌شه یه چیز تازه یاد گرفت!']],
+      [/(مرسی|ممنون|متشکر|دمت گرم)/, ['خواهش می‌کنم! حالا بریم سراغ رقابت!','قابلی نداشت؛ ولی حواست به حرکت بعدی من باشه!']],
+      [/(ببخش|معذرت|شرمنده)/, ['اشکالی نداره! بازی باید خوش بگذره.','مهم اینه که با حال خوب بازی کنیم!']],
+      [/(خداحافظ|فعلا|فعلاً|بای|شب بخیر)/, ['فعلاً! امیدوارم دفعه بعد هم بازی کنیم. 👋','خداحافظ! مراقب مرغ و تخم‌هات باش! 🐔']],
+      [/(دوست داری|دوست من|رفیق)/, ['من رفیق رقابتی توام؛ البته توی بازی کوتاه نمیام! 😄','گپ زدن خوبه، ولی رقابت با تو جذاب‌تره!']],
+      [/(خسته|حوصله|کسل)/, ['پس یه حرکت هیجان‌انگیز بزن تا بازی جون بگیره!','بیا بازی رو جذاب کنیم؛ هنوز کلی اتفاق ممکنه بیفته!']],
+      [/(چرا|چیکار|چه کار)/, ['دارم بهترین فرصت رو بررسی می‌کنم؛ عجله همیشه خوب نیست!','یه کم صبر کن؛ شاید حرکت بعدی غافلگیرت کنه.']],
+      [/(هوش مصنوعی|ربات|باهوش|هوشمند)/, ['من دارم تلاش می‌کنم هر دست بهتر بازی کنم و بهتر جواب بدم! 🤖','هوشمند بودن یعنی فقط کارت نکشیم؛ باید موقعیت رو هم بسنجیم!']],
+      [/(خنده|جوک|شوخی)/, ['چرا مرغ از خیابون رد شد؟ چون می‌خواست بره توی دست برنده‌ها! 😂','یه روز روباه به مرغ گفت: نترس، فقط اومدم تخم‌مرغاتو ببینم! 🦊']],
+      [/(آفرین|عالی|خوبه|خوب بود)/, ['ممنون! ولی هنوز بازی تموم نشده؛ آماده حرکت بعدی باش!','تو هم بد بازی نمی‌کنی؛ رقابت جذاب شده!']],
+      [/(نه|نخیر|اشتباه)/, ['ممکنه حق با تو باشه؛ دقیق‌تر بگو منظورت چیه؟','باشه، توضیح بده تا بهتر متوجه بشم.']]
+    ];
+    for (const [pattern, replies] of bank) if (pattern.test(text)) return pick(replies);
+
+    const generic = [
+      'جالبه! بیشتر برام تعریف کن.',
+      'آها، دارم گوش می‌دم. راستی نقشه‌ات برای برد چیه؟',
+      'نظرت درباره حرکت بعدی چیه؟ من که یه نقشه‌هایی دارم! 😄',
+      'این حرفت جالب بود؛ حالا ببینیم توی بازی چه اتفاقی می‌افته.',
+      'من حواسم به بازی هست، ولی گپ زدن هم بد نیست!',
+      'یه کم بیشتر توضیح بده تا بهتر جواب بدم.',
+      'ممکنه! باید ببینیم کارت‌ها چه فرصتی بهمون می‌دن.',
+      'تو اول حرکتت رو بزن، بعد می‌فهمیم کدوم‌مون زرنگ‌تریم! 🐔'
+    ];
+    const localReply = () => {
+      for (const [pattern, replies] of bank) if (pattern.test(text)) return pick(replies);
+      return pick(generic);
     };
-    const system = [
-      'تو مرغ‌دونِ هوشمند هستی؛ ربات حریف و هم‌صحبت بازی مرغ‌دونی.',
-      'همیشه به فارسی روان، دوستانه، کوتاه و طبیعی جواب بده.',
-      'می‌توانی درباره بازی و موضوعات معمولی گفتگو کنی.',
-      'قوانین یا وضعیت بازی را جعل نکن؛ فقط از اطلاعات وضعیت بازی استفاده کن.',
-      'کارت‌های مخفی و محتوای دست بازیکنان را افشا نکن.',
-      'اگر سؤال درباره قوانین دقیق بازی است و مطمئن نیستی، صادقانه بگو مطمئن نیستی.',
-      'حداکثر در ۲ جمله پاسخ بده و از ایموجی کم استفاده کن.'
-    ].join(' ');
+
     try {
-      if (!this.env?.AI?.run) throw new Error('AI binding unavailable');
-      const messages = [
-        { role: 'system', content: system + '\nوضعیت فعلی بازی: ' + JSON.stringify(gameState) },
-        ...history,
-        { role: 'user', content: String(playerName || 'بازیکن') + ' می‌گوید: ' + String(message || '').slice(0, 500) }
-      ];
+      if (!this.env?.AI?.run) return localReply();
+      const history = Array.isArray(room.botChatHistory) ? room.botChatHistory.slice(-8) : [];
+      const gameState = {
+        players: (room.players || []).map(p => ({name:p.name,isBot:!!p.isBot,eggs:p.eggs||0,chicks:p.chicks||0,handCount:(p.hand||[]).length})),
+        eggTokens: room.eggTokens,
+        currentTurn: room.players?.find(p => p.id === room.currentTurn)?.name || null
+      };
+      const system = 'تو مرغ‌دونی هوشمند هستی؛ حریف بازی و هم‌صحبت فارسی‌زبان. به هر موضوعی که بازیکن مطرح می‌کند طبیعی، دوستانه و مرتبط جواب بده؛ فقط درباره بازی حرف نزن. جواب‌ها کوتاه و متنوع باشند. وضعیت بازی را از داده‌های داده‌شده بخوان و جعل نکن. کارت‌های مخفی را فاش نکن. برای سلام، احوال‌پرسی، شوخی، تشکر، خداحافظی، پرسش درباره بازی و گفت‌وگوی روزمره پاسخ مناسب بده. حداکثر دو جمله. وضعیت: '+JSON.stringify(gameState);
       const result = await this.env.AI.run('@cf/openai/gpt-oss-20b', {
-        messages,
-        max_tokens: 180,
-        temperature: 0.7
+        messages:[{role:'system',content:system},...history,{role:'user',content:playerName+' می‌گوید: '+raw}],
+        max_tokens:180,
+        temperature:0.85
       });
-      let reply = result?.output_text || result?.response || result?.result?.response || '';
-      if (!reply && Array.isArray(result?.output)) {
-        reply = result.output.flatMap(x => x.content || []).map(x => x.text || '').join(' ');
-      }
-      reply = String(reply || '').trim().slice(0, 700);
-      if (!reply) throw new Error('Empty AI response');
-      room.botChatHistory = [
-        ...history,
-        { role: 'user', content: String(message || '').slice(0, 500) },
-        { role: 'assistant', content: reply }
-      ].slice(-10);
-      this.save().catch(() => {});
+      let reply = result?.response || result?.output_text || result?.result?.response || '';
+      if (!reply && Array.isArray(result?.output)) reply=result.output.flatMap(x=>x.content||[]).map(x=>x.text||'').join(' ');
+      reply=String(reply||'').trim().slice(0,700);
+      if (!reply) return localReply();
+      room.botChatHistory=[...history,{role:'user',content:raw},{role:'assistant',content:reply}].slice(-10);
+      this.save().catch(()=>{});
       return reply;
     } catch (error) {
-      console.error('Morgdoni AI chat error:', error);
-      return 'فعلاً مغزم یه کم قاطی کرده! 😅 دوباره بهم پیام بده.';
+      console.error('Morgdoni AI chat error:',error);
+      return localReply();
     }
   }
+
+  // نوبت‌گیری هوشمند: اول حرکت‌های امتیازساز، بعد حمله و در نهایت کشیدن کارت.
+  async runBotTurns(r) {
+    let safety = 0;
+    while (r && !r.winner && safety++ < 3) {
+      const bot = r.players.find(p => p.id === r.currentTurn && p.isBot);
+      if (!bot) break;
+      const target = r.players.find(p => p.id !== bot.id);
+      const hand = bot.hand || [];
+      const take = card => { const i=hand.indexOf(card); if(i<0)return false; hand.splice(i,1); return true; };
+      let acted = false;
+
+      // بردن بازی همیشه مهم‌ترین اولویت است.
+      if (bot.eggs > 0 && hand.filter(x=>x==='مرغ').length >= 2) {
+        for(let n=0;n<2;n++) take('مرغ');
+        bot.eggs--; bot.chicks++; acted=true;
+      } else if (r.eggTokens > 0 && ['مرغ','خروس','لانه'].every(x=>hand.includes(x))) {
+        take('مرغ'); take('خروس'); take('لانه'); bot.eggs++; r.eggTokens--; acted=true;
+      } else if (target?.eggs > 0 && hand.includes('روباه')) {
+        take('روباه');
+        const roosters=target.hand?.filter(x=>x==='خروس').length||0;
+        if(roosters>=2){let n=0;for(let i=0;i<target.hand.length&&n<2;i++)if(target.hand[i]==='خروس'){target.hand.splice(i,1);i--;n++;}}
+        else {target.eggs--;bot.eggs++;}
+        acted=true;
+      } else if (target?.eggs > 0 && hand.includes('مار')) {
+        take('مار');
+        const broken=Math.min(2,target.eggs);
+        target.eggs-=broken; r.eggTokens=(r.eggTokens||0)+broken; acted=true;
+      } else if (target?.hand?.length && hand.includes('تله')) {
+        take('تله');
+        // کارت باارزش‌تر حریف را هدف می‌گیرد، بدون نمایش آن به بازیکن.
+        const value={ 'مرغ':5,'خروس':5,'لانه':5,'روباه':4,'مار':3,'تله':2 };
+        let ix=0;
+        for(let i=1;i<target.hand.length;i++) if((value[target.hand[i]]||1)>(value[target.hand[ix]]||1)) ix=i;
+        target.hand.splice(ix,1); acted=true;
+      }
+
+      // اگر حرکت ویژه‌ای ممکن نبود، کارت تازه می‌کشد؛ دست ربات بی‌دلیل خالی نمی‌شود.
+      if (!acted) {
+        if (r.deck?.length) { hand.push(r.deck.pop()); acted=true; }
+        else if (r.discardPile?.length) { r.deck=shuffle([...r.discardPile]);r.discardPile=[];hand.push(r.deck.pop());acted=true; }
+      }
+      if (!acted) break;
+      while(hand.length<4 && r.deck?.length) hand.push(r.deck.pop());
+      await this.finish(r);
+      if(r.winner) break;
+      const turnIndex=r.players.findIndex(x=>x.id===r.currentTurn);
+      r.currentTurn=r.players[(turnIndex+1)%r.players.length].id;
+    }
+  }
+
 
 
   // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
