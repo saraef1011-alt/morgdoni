@@ -505,8 +505,8 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
     <div class="chat-input-area"><input type="text" class="chat-input" id="chatInput" placeholder="پیامت را بنویس..."><button class="send-btn" id="sendBtn">➤</button></div>
     <div class="chat-tools">
 <button onclick="showCustomMessage()">😀 استیکر</button>
-
-<button id="chatMicVisual" onclick="document.getElementById('micToggleBtn')?.click()">🎙️ ویس</button>
+<button id="chatMicVisual" onclick="document.getElementById('micToggleBtn')?.click()">🎙️ ویس گروهی</button>
+<button id="botTalkBtn" type="button">🎤 صحبت با ربات</button>
 <label class="file-send-btn">📎 فایل / 🎵 صدا<input id="chatFileInput" type="file" accept="audio/*,image/*,video/*,.gif" hidden></label>
 </div>
   </aside>
@@ -1385,6 +1385,9 @@ function forceMorgdoniGameView() {
             socket.on('chatMessage', (data) => {
                 if (data.sender !== myName) soundChatMsg();
                 addChatMessage(data.sender, data.message, data.time);
+                if (data.sender && /مرغ‌دونِ هوشمند|مرغ‌دونی هوشمند/.test(data.sender)) {
+                    speakBotReply(data.message);
+                }
             });
             socket.on('chatSticker', (data) => {
                 if (data && data.sender !== myName) {
@@ -2046,6 +2049,60 @@ function forceMorgdoniGameView() {
         reader.readAsDataURL(file);
     }
 
+    let botSpeechRecognition = null;
+    let botVoiceListening = false;
+
+    function speakBotReply(message) {
+        if (!('speechSynthesis' in window) || !message) return;
+        try {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(String(message));
+            utterance.lang = 'fa-IR';
+            utterance.rate = 1;
+            window.speechSynthesis.speak(utterance);
+        } catch (err) { console.warn('Bot voice output unavailable', err); }
+    }
+
+    function toggleBotVoice() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const btn = document.getElementById('botTalkBtn');
+        if (!SpeechRecognition) {
+            showBigMessage('❌ تشخیص گفتار فارسی در این مرورگر پشتیبانی نمی‌شود. از Chrome استفاده کن.', true);
+            return;
+        }
+        if (botVoiceListening && botSpeechRecognition) {
+            botSpeechRecognition.stop();
+            return;
+        }
+        botSpeechRecognition = new SpeechRecognition();
+        botSpeechRecognition.lang = 'fa-IR';
+        botSpeechRecognition.continuous = false;
+        botSpeechRecognition.interimResults = false;
+        botSpeechRecognition.maxAlternatives = 1;
+        botSpeechRecognition.onstart = () => {
+            botVoiceListening = true;
+            if (btn) btn.textContent = '⏹️ توقف گوش‌دادن';
+            updateStatus('🎤 دارم گوش می‌دهم؛ صحبت کن...');
+        };
+        botSpeechRecognition.onresult = (event) => {
+            const spoken = event.results?.[0]?.[0]?.transcript || '';
+            const input = document.getElementById('chatInput');
+            if (input && spoken.trim()) {
+                input.value = spoken.trim();
+                sendChat();
+            }
+        };
+        botSpeechRecognition.onerror = (event) => {
+            showBigMessage(event.error === 'not-allowed' ? '❌ اجازه میکروفون داده نشد' : '❌ صدایت تشخیص داده نشد؛ دوباره امتحان کن', true);
+        };
+        botSpeechRecognition.onend = () => {
+            botVoiceListening = false;
+            if (btn) btn.textContent = '🎤 صحبت با ربات';
+        };
+        try { botSpeechRecognition.start(); }
+        catch (err) { botVoiceListening = false; if (btn) btn.textContent = '🎤 صحبت با ربات'; }
+    }
+
     function sendChat() {
         let input = document.getElementById('chatInput');
         let msg = input.value.trim();
@@ -2230,6 +2287,7 @@ function forceMorgdoniGameView() {
             'endTurnBtn': endTurnManually,
             'bigMessageBtn': showCustomMessage,
             'sendBtn': sendChat,
+            'botTalkBtn': toggleBotVoice,
             'editProfileBtn': openProfileEditor,
             'soundToggleBtn': toggleSound,
             'musicToggleBtn': toggleMusic,
