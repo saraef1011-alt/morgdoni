@@ -185,56 +185,119 @@ export class GameRoom extends BaseGameRoom {
     }
   }
 
-  // نوبت‌گیری هوشمند: اول حرکت‌های امتیازساز، بعد حمله و در نهایت کشیدن کارت.
+  // تصمیم‌گیری ربات: اول برد خودش، بعد جلوگیری از برد حریف، بعد حمله و در آخر تعویض کارت ضعیف.
   async runBotTurns(r) {
     let safety = 0;
-    while (r && !r.winner && safety++ < 3) {
+    while (r && !r.winner && safety++ < 10) {
       const bot = r.players.find(p => p.id === r.currentTurn && p.isBot);
       if (!bot) break;
-      const target = r.players.find(p => p.id !== bot.id);
-      const hand = bot.hand || [];
-      const take = card => { const i=hand.indexOf(card); if(i<0)return false; hand.splice(i,1); return true; };
+
+      bot.hand ||= [];
+      while (bot.hand.length > 4) r.discardPile.push(bot.hand.pop());
+
+      const enemies = r.players.filter(p => p.id !== bot.id);
+      const target = enemies.sort((a,b) =>
+        ((b.chicks||0)*100 + (b.eggs||0)*12 - (b.hand?.filter(c=>c==='خروس').length>=2?8:0)) -
+        ((a.chicks||0)*100 + (a.eggs||0)*12 - (a.hand?.filter(c=>c==='خروس').length>=2?8:0))
+      )[0];
+      const take = card => {
+        const i = bot.hand.indexOf(card);
+        if (i < 0) return false;
+        bot.hand.splice(i, 1);
+        return true;
+      };
+      const reshuffle = () => {
+        if (r.deck?.length || !r.discardPile?.length) return;
+        r.deck = [...r.discardPile];
+        r.discardPile = [];
+        for (let i=r.deck.length-1;i>0;i--) {
+          const j=Math.floor(Math.random()*(i+1));
+          [r.deck[i],r.deck[j]]=[r.deck[j],r.deck[i]];
+        }
+      };
+      const drawToFour = () => {
+        reshuffle();
+        while (bot.hand.length < 4 && r.deck?.length) bot.hand.push(r.deck.pop());
+      };
+
       let acted = false;
 
-      // بردن بازی همیشه مهم‌ترین اولویت است.
-      if (bot.eggs > 0 && hand.filter(x=>x==='مرغ').length >= 2) {
-        for(let n=0;n<2;n++) take('مرغ');
+      // اگر با دو مرغ بتواند جوجه بسازد، همیشه این حرکت را انجام می‌دهد.
+      if (bot.eggs > 0 && bot.hand.filter(c=>c==='مرغ').length >= 2) {
+        let removed=0;
+        for(let i=0;i<bot.hand.length && removed<2;i++) {
+          if(bot.hand[i]==='مرغ'){bot.hand.splice(i,1);i--;removed++;}
+        }
         bot.eggs--; bot.chicks++; acted=true;
-      } else if (r.eggTokens > 0 && ['مرغ','خروس','لانه'].every(x=>hand.includes(x))) {
-        take('مرغ'); take('خروس'); take('لانه'); bot.eggs++; r.eggTokens--; acted=true;
-      } else if (target?.eggs > 0 && hand.includes('روباه')) {
+      }
+      // ساخت تخم جدید، وقتی ترکیب کامل را دارد.
+      else if (r.eggTokens > 0 && ['مرغ','خروس','لانه'].every(c=>bot.hand.includes(c))) {
+        take('مرغ'); take('خروس'); take('لانه');
+        bot.eggs++; r.eggTokens--; acted=true;
+      }
+      // روباه را علیه حریفی به کار می‌برد که تخم دارد و دفاعش ضعیف‌تر است.
+      else if (target?.eggs > 0 && bot.hand.includes('روباه')) {
         take('روباه');
-        const roosters=target.hand?.filter(x=>x==='خروس').length||0;
-        if(roosters>=2){let n=0;for(let i=0;i<target.hand.length&&n<2;i++)if(target.hand[i]==='خروس'){target.hand.splice(i,1);i--;n++;}}
-        else {target.eggs--;bot.eggs++;}
+        const roosters=target.hand?.filter(c=>c==='خروس').length||0;
+        if(roosters>=2) {
+          let removed=0;
+          for(let i=0;i<target.hand.length && removed<2;i++) {
+            if(target.hand[i]==='خروس'){target.hand.splice(i,1);i--;removed++;}
+          }
+        } else { target.eggs--; bot.eggs++; }
         acted=true;
-      } else if (target?.eggs > 0 && hand.includes('مار')) {
+      }
+      // مار تا دو تخم حریف را از بین می‌برد.
+      else if (target?.eggs > 0 && bot.hand.includes('مار')) {
         take('مار');
         const broken=Math.min(2,target.eggs);
-        target.eggs-=broken; r.eggTokens=(r.eggTokens||0)+broken; acted=true;
-      } else if (target?.hand?.length && hand.includes('تله')) {
+        target.eggs-=broken;
+        r.eggTokens=(r.eggTokens||0)+broken;
+        acted=true;
+      }
+      // تله مهم‌ترین کارت حریف را هدف می‌گیرد.
+      else if (target?.hand?.length && bot.hand.includes('تله')) {
         take('تله');
-        // کارت باارزش‌تر حریف را هدف می‌گیرد، بدون نمایش آن به بازیکن.
-        const value={ 'مرغ':5,'خروس':5,'لانه':5,'روباه':4,'مار':3,'تله':2 };
+        const value={'مرغ':6,'خروس':6,'لانه':6,'روباه':5,'مار':4,'تله':3};
         let ix=0;
-        for(let i=1;i<target.hand.length;i++) if((value[target.hand[i]]||1)>(value[target.hand[ix]]||1)) ix=i;
-        target.hand.splice(ix,1); acted=true;
+        for(let i=1;i<target.hand.length;i++) {
+          if((value[target.hand[i]]||1)>(value[target.hand[ix]]||1)) ix=i;
+        }
+        target.hand.splice(ix,1);
+        acted=true;
       }
 
-      // اگر حرکت ویژه‌ای ممکن نبود، کارت تازه می‌کشد؛ دست ربات بی‌دلیل خالی نمی‌شود.
-      if (!acted) {
-        if (r.deck?.length) { hand.push(r.deck.pop()); acted=true; }
-        else if (r.discardPile?.length) { r.deck=shuffle([...r.discardPile]);r.discardPile=[];hand.push(r.deck.pop());acted=true; }
+      if (acted) {
+        drawToFour();
+      } else {
+        // اگر دستش پر است، کم‌ارزش‌ترین کارت را دور می‌اندازد و جایگزین می‌کشد؛ هرگز کارت پنجم نمی‌گیرد.
+        if (bot.hand.length >= 4) {
+          const score = card => {
+            let n=({ 'مرغ':4,'خروس':4,'لانه':4,'روباه':1,'مار':1,'تله':1 }[card]||0);
+            if (bot.eggs>0 && card==='مرغ') n+=7;
+            if (r.eggTokens>0 && ['مرغ','خروس','لانه'].includes(card)) {
+              const missing=['مرغ','خروس','لانه'].filter(c=>!bot.hand.includes(c)).length;
+              if(missing<=1) n+=5;
+              else n+=1;
+            }
+            if (target?.eggs>0 && card==='روباه') n+=8;
+            if (target?.eggs>0 && card==='مار') n+=6;
+            if (target?.hand?.length && card==='تله') n+=3;
+            return n;
+          };
+          let weakest=0;
+          for(let i=1;i<bot.hand.length;i++) if(score(bot.hand[i])<score(bot.hand[weakest])) weakest=i;
+          r.discardPile.push(bot.hand.splice(weakest,1)[0]);
+        }
+        drawToFour();
       }
-      if (!acted) break;
-      while(hand.length<4 && r.deck?.length) hand.push(r.deck.pop());
+
       await this.finish(r);
-      if(r.winner) break;
-      const turnIndex=r.players.findIndex(x=>x.id===r.currentTurn);
+      if (r.winner) break;
+      const turnIndex=r.players.findIndex(p=>p.id===r.currentTurn);
       r.currentTurn=r.players[(turnIndex+1)%r.players.length].id;
     }
   }
-
 
 
   // پاک‌سازی بازیکنان بلافاصله بعد از پایان بازی تا در لابی آنلاین باقی نمانند.
