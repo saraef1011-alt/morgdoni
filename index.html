@@ -1405,6 +1405,7 @@ function forceMorgdoniGameView() {
         }
     }
 
+    function startSinglePlayer() { const name=document.getElementById('playerName').value.trim(); if(!name){alert('نام خود را وارد کن');return;} myName=name; if(!socket)connectSocket(); setTimeout(()=>{socket.emit('createSinglePlayer',{playerName:name,accountId:myAccountId,avatar:myProfile?.avatar||selectedAvatar||'🐔'});document.getElementById('joinPanel').style.display='none';document.getElementById('gamePanel').style.display='block';updateStatus('🤖 در حال آماده‌سازی حریف هوشمند...');},300); }
     function createRoom() {
         let name = document.getElementById('playerName').value.trim();
         if (!name) { alert('نام خود را وارد کن'); return; }
