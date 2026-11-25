@@ -1174,6 +1174,15 @@ function forceMorgdoniGameView() {
                 }
             });
             
+            socket.on('singlePlayerReady', (data) => {
+                if (data?.roomId) {
+                    roomId = data.roomId;
+                    localStorage.setItem('md_activeRoom', roomId);
+                    // اگر پیام اولیه‌ی بازی به‌علت اتصال دیررس از دست رفت، وضعیت را دوباره بگیر.
+                    if (!window.morgdoniGameStarted && socket) socket.emit('getGameState', { roomId });
+                }
+            });
+
             socket.on('gameState', (state) => {
                 gameState = state;
                 // اگر مسابقه شروع شده، هیچ رویداد دیگری نباید صفحه خوش‌آمد را برگرداند.
