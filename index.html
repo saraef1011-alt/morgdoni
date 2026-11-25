@@ -400,6 +400,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
       <input type="text" id="playerName" placeholder="نام شما" maxlength="20">
       <input type="text" id="roomIdInput" placeholder="کد اتاق (برای ورود)">
       <div class="join-actions"><button id="createRoomBtn" class="primary-btn">✨ ساخت اتاق</button><button id="joinRoomBtn" class="secondary-btn">🚪 ورود به اتاق</button></div>
+      <button id="singlePlayerBtn" class="secondary-btn">🤖 بازی تک‌نفره با هوش مصنوعی</button>
       <div id="roomStatus" class="room-status"></div>
       <button id="enterLobbyBtn" class="lobby-btn">🌐 ورود به لابی بازیکنان آنلاین</button>
     </div>
@@ -1404,6 +1405,7 @@ function forceMorgdoniGameView() {
         }
     }
 
+    function startSinglePlayer() { const name=document.getElementById('playerName').value.trim(); if(!name){alert('نام خود را وارد کن');return;} myName=name; if(!socket)connectSocket(); setTimeout(()=>{socket.emit('createSinglePlayer',{playerName:name,accountId:myAccountId,avatar:myProfile?.avatar||selectedAvatar||'🐔'});document.getElementById('joinPanel').style.display='none';document.getElementById('gamePanel').style.display='block';updateStatus('🤖 در حال آماده‌سازی حریف هوشمند...');},300); }
     function createRoom() {
         let name = document.getElementById('playerName').value.trim();
         if (!name) { alert('نام خود را وارد کن'); return; }
@@ -2199,6 +2201,7 @@ function forceMorgdoniGameView() {
         // دکمه‌های اصلی با ID
         const buttonMap = {
             'createRoomBtn': createRoom,
+            'singlePlayerBtn': startSinglePlayer,
             'joinRoomBtn': joinRoom,
             'enterLobbyBtn': enterLobby,
             'lobbyBackBtn': backToJoinPanel,
