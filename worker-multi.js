@@ -9,7 +9,18 @@ export class GameRoom extends BaseGameRoom {
     const t = m?.type, d = m?.data || {};
     await this.ready;
 
-    if (t === 'createSinglePlayer') {\n      const human=this.data.online[id];\n      if(!human)return this.send(id,'gameError','ابتدا وارد لابی شوید');\n      if(this.roomOf(id))return this.send(id,'gameError','ابتدا از بازی فعلی خارج شوید');\n      const bot={id:'BOT_'+crypto.randomUUID(),name:'مرغ‌دونی AI',avatar:'🤖',accountId:null,isBot:true};\n      human.status='playing';\n      this.newRoomMany([human,bot],true);\n      await this.save();\n      return;\n    }\n\n    if (t === 'joinRoom') {
+    if (t === 'createSinglePlayer') {
+      const human=this.data.online[id];
+      if(!human)return this.send(id,'gameError','ابتدا وارد لابی شوید');
+      if(this.roomOf(id))return this.send(id,'gameError','ابتدا از بازی فعلی خارج شوید');
+      const bot={id:'BOT_'+crypto.randomUUID(),name:'مرغ‌دونی AI',avatar:'🤖',accountId:null,isBot:true};
+      human.status='playing';
+      this.newRoomMany([human,bot],true);
+      await this.save();
+      return;
+    }
+
+    if (t === 'joinRoom') {
       const rid = String(d.roomId || '').trim().toUpperCase();
       const r = this.data.rooms[rid];
       if (!r) return this.send(id, 'roomError', 'اتاق پیدا نشد');
