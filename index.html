@@ -415,7 +415,8 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
       </div>
       <div class="epic-lobby-actions">
         <div class="epic-section-heading"><div><span class="epic-section-icon">⚡</span><div><b>ورود سریع به رقابت</b><small>تعداد بازیکن‌ها رو انتخاب کن و بزن بریم</small></div></div><span class="epic-status-label"><i></i> آماده‌ی بازی</span></div>
-        <button class="quick-btn epic-quick-btn" id="quickGameBtn"><span class="epic-quick-icon">🎡</span><span><b>بازی سریع</b><small>پیدا کردن بازیکن و شروع خودکار</small></span><span class="epic-arrow">←</span></button>\n        <button class="quick-btn epic-quick-btn" id="aiGameBtn" style="margin-top:12px;background:linear-gradient(105deg,#7c3aed,#4f46e5)!important;border-color:#c4b5fd66!important"><span class="epic-quick-icon">🤖</span><span><b>بازی تک‌نفره با هوش مصنوعی</b><small>یک حریف رباتی با تصمیم‌های تاکتیکی</small></span><span class="epic-arrow">←</span></button>
+        <button class="quick-btn epic-quick-btn" id="quickGameBtn"><span class="epic-quick-icon">🎡</span><span><b>بازی سریع</b><small>پیدا کردن بازیکن و شروع خودکار</small></span><span class="epic-arrow">←</span></button>
+        <button class="quick-btn epic-quick-btn" id="aiGameBtn" style="margin-top:12px;background:linear-gradient(105deg,#7c3aed,#4f46e5)!important;border-color:#c4b5fd66!important"><span class="epic-quick-icon">🤖</span><span><b>بازی تک‌نفره با هوش مصنوعی</b><small>یک حریف رباتی با تصمیم‌های تاکتیکی</small></span><span class="epic-arrow">←</span></button>
       </div>
       <div class="epic-players-section">
         <div class="epic-section-heading"><div><span class="epic-section-icon">🌐</span><div><b>بازیکن‌های آنلاین</b><small>برای بازی مستقیم، درخواست بفرست</small></div></div><span class="epic-online-counter"><span id="epicOtherCount">۰</span> نفر</span></div>
@@ -2212,7 +2213,8 @@ function forceMorgdoniGameView() {
             'joinRoomBtn': joinRoom,
             'enterLobbyBtn': enterLobby,
             'lobbyBackBtn': backToJoinPanel,
-            'quickGameBtn': quickGame,\n            'aiGameBtn': startSinglePlayer,
+            'quickGameBtn': quickGame,
+            'aiGameBtn': startSinglePlayer,
             'startGameBtn': startGame,
             'layBtn': layEgg,
             'hatchBtn': hatch,
