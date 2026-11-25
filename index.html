@@ -906,6 +906,21 @@ function forceMorgdoniGameView() {
     let gameState = null;
     let socketListenersAttached = false;
     let myLobbyName = '';
+    let singlePlayerPending = false;
+
+    function setSinglePlayerBusy(busy, message) {
+        const btn = document.getElementById('aiGameBtn');
+        if (!btn) return;
+        const title = btn.querySelector('b');
+        const small = btn.querySelector('small');
+        if (title && !btn.dataset.aiTitle) btn.dataset.aiTitle = title.textContent;
+        if (small && !btn.dataset.aiSubtitle) btn.dataset.aiSubtitle = small.textContent;
+        btn.disabled = !!busy;
+        btn.style.opacity = busy ? '0.72' : '1';
+        btn.style.cursor = busy ? 'wait' : 'pointer';
+        if (title) title.textContent = busy ? 'در حال شروع بازی…' : (btn.dataset.aiTitle || 'بازی تک‌نفره با هوش مصنوعی');
+        if (small) small.textContent = busy ? (message || 'در حال اتصال و ساخت اتاق…') : (btn.dataset.aiSubtitle || 'یک حریف رباتی با تصمیم‌های تاکتیکی');
+    }
 
     // ===== حساب کاربری و پروفایل =====
     let myAccountId = localStorage.getItem('md_accountId');
@@ -1204,12 +1219,23 @@ function forceMorgdoniGameView() {
                 if (window.morgdoniGameStarted) return;
                 myId = data.id;
                 myLobbyName = data.name;
+                if (singlePlayerPending) {
+                    singlePlayerPending = false;
+                    setTimeout(() => {
+                        if (socket && !window.morgdoniGameStarted) {
+                            setSinglePlayerBusy(true, 'در حال ساخت اتاق و آماده‌کردن حریف…');
+                            socket.emit('createSinglePlayer');
+                        }
+                    }, 80);
+                }
                 document.getElementById('joinPanel').style.display = 'none';
                 document.getElementById('lobbyPanel').style.display = 'block';
                 addLog(`🌐 وارد لابی آنلاین شدی: ${data.name}`);
             });
 
             socket.on('registrationError', (msg) => {
+                singlePlayerPending = false;
+                setSinglePlayerBusy(false);
                 alert(msg);
             });
 
@@ -1283,6 +1309,8 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('gameError', (msg) => {
+                singlePlayerPending = false;
+                setSinglePlayerBusy(false);
                 hideQuickWheel();
                 showBigMessage(`❌ ${msg}`, true);
             });
@@ -1300,6 +1328,8 @@ function forceMorgdoniGameView() {
             });
 
             socket.on('gameStarted', (data) => {
+                singlePlayerPending = false;
+                setSinglePlayerBusy(false);
                 hideQuickWheel();
                 window.morgdoniGameStarted = true;
                 document.body.classList.add('morgdoni-in-game');
@@ -1690,11 +1720,45 @@ function forceMorgdoniGameView() {
     }
 
     function startSinglePlayer() {
+        if (window.morgdoniGameStarted) return;
 
-        if (!socket) return;
+        // اگر اتصال قبلی بسته شده، یک اتصال تازه بساز و دوباره ثبت‌نام کن.
+        if (socket && socket.ws && socket.ws.readyState === 3) {
+            try { socket.disconnect(); } catch (e) {}
+            socket = null;
+            socketListenersAttached = false;
+            myId = null;
+            myLobbyName = '';
+        }
+        if (!socket) connectSocket();
 
+        if (!myId || !myLobbyName) {
+            const name = (document.getElementById('playerName')?.value || '').trim();
+            if (!name) {
+                showBigMessage('ابتدا نام خود را وارد کن', true);
+                return;
+            }
+            singlePlayerPending = true;
+            setSinglePlayerBusy(true, 'در حال ثبت‌نام و اتصال به بازی…');
+            enterLobby();
+            return;
+        }
+
+        if (!socket) {
+            setSinglePlayerBusy(false);
+            showBigMessage('اتصال بازی برقرار نشد؛ صفحه را یک‌بار تازه‌سازی کن', true);
+            return;
+        }
+        setSinglePlayerBusy(true, 'در حال ساخت اتاق و آماده‌کردن حریف…');
         socket.emit('createSinglePlayer');
-
+        // اگر سرور پاسخی نداد، دکمه قفل نماند و پیام روشن نشان بدهد.
+        setTimeout(() => {
+            if (!window.morgdoniGameStarted && document.getElementById('aiGameBtn')?.disabled) {
+                singlePlayerPending = false;
+                setSinglePlayerBusy(false);
+                showBigMessage('شروع بازی پاسخ نداد. اتصال سرور را بررسی کن و دوباره بزن.', true);
+            }
+        }, 12000);
     }
 
     
