@@ -15,7 +15,9 @@ export class GameRoom extends BaseGameRoom {
       if(this.roomOf(id))return this.send(id,'gameError','ابتدا از بازی فعلی خارج شوید');
       const bot={id:'BOT_'+crypto.randomUUID(),name:'مرغ‌دونی AI',avatar:'🤖',accountId:null,isBot:true};
       human.status='playing';
-      this.newRoomMany([human,bot],true);
+      const roomId=this.newRoomMany([human,bot],true);
+      this.send(id,'singlePlayerReady',{roomId,botName:bot.name});
+      this.updateList();
       await this.save();
       return;
     }
