@@ -385,7 +385,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
       <div class="top-actions">
         <button id="soundToggleBtn" class="round-btn" title="صدا">🔊</button>
         <button id="musicToggleBtn" class="round-btn" title="موسیقی">🎵</button>
-        <button id="morgAIChatOpen" class="round-btn" type="button" title="صحبت با ربات" aria-label="صحبت با ربات">🤖</button>
+        <button id="morgAIChatOpen" class="round-btn" type="button" title="چت با هوش مصنوعی" aria-label="چت با هوش مصنوعی">💬</button>
       </div>
       <div class="connection-pill">📶 <span id="roomCodeSpan">---</span> <b>●</b></div>
     </header>
@@ -2531,5 +2531,53 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 }
 </style>
 <style id="morgdoni-ai-chat-button-style">#morgAIChatOpen{background:linear-gradient(145deg,#9b5de5,#6d28d9)!important;color:#fff!important;border:2px solid #e9d5ff!important;box-shadow:0 3px 0 #4c1d95!important;cursor:pointer!important}#morgAIChatOpen:active{transform:translateY(2px)}</style>
-<style id="morgdoni-ai-voice-style">#morgAIvoice{position:fixed;z-index:999999;right:16px;bottom:16px;width:min(340px,calc(100vw - 32px));background:#111827f5;color:#fff;border:1px solid #a78bfa66;border-radius:18px;padding:14px;box-shadow:0 16px 50px #0008;font:14px system-ui}#morgAIvoice h3{margin:0 0 8px;font-size:16px}#morgAIvoice .airow{display:flex;gap:7px;margin-top:8px}#morgAIvoice button{border:0;border-radius:11px;padding:10px 12px;font-weight:800;cursor:pointer}#morgAIvoice #aiMic{background:#7c3aed;color:white;flex:1}#morgAIvoice #aiSend{background:#059669;color:white}#morgAIvoice input{width:100%;box-sizing:border-box;border-radius:10px;border:1px solid #475569;background:#0f172a;color:white;padding:10px}#morgAIvoice #aiTalkStatus{font-size:12px;color:#c4b5fd;min-height:18px;margin-top:7px;line-height:1.6}#morgAIvoice #aiTalkClose{float:left;background:transparent;color:#cbd5e1;padding:0 5px}@media(max-width:600px){#morgAIvoice{right:8px;bottom:8px;width:calc(100vw - 16px)}}</style><section id="morgAIvoice" aria-label="گفت‌وگو با هوش مصنوعی" style="display:none"><button id="aiTalkClose" title="بستن">✕</button><h3>🤖 صحبت با هوش مصنوعی</h3><input id="aiTalkInput" maxlength="600" placeholder="اینجا بنویس یا با میکروفون حرف بزن…"><div class="airow"><button id="aiMic">🎙️ شروع صحبت</button><button id="aiSend">ارسال</button></div><div id="aiTalkStatus">برای صحبت، اجازه میکروفون را در مرورگر بده.</div></section><script id="morgdoni-ai-voice-script">(function(){const box=document.getElementById('morgAIvoice'),input=document.getElementById('aiTalkInput'),mic=document.getElementById('aiMic'),send=document.getElementById('aiSend'),status=document.getElementById('aiTalkStatus');let rec=null,listening=false,replyTimer=null;function socket(){return window.__MORG_SOCKET__||window.socket}function say(t){if(!('speechSynthesis'in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fa-IR';u.rate=1;speechSynthesis.speak(u)}catch(e){}}function sendText(){const s=socket(),t=input.value.trim();if(!t)return;if(!s||s.ws?.readyState!==1){status.textContent='اتصال بازی برقرار نیست؛ کمی صبر کن و دوباره بزن.';return}status.textContent='در حال دریافت پاسخ از AI…';send.disabled=true;clearTimeout(replyTimer);replyTimer=setTimeout(()=>{send.disabled=false;status.textContent='پاسخ دیر رسید؛ اتصال را بررسی کن و دوباره بفرست.'},35000);s.emit('aiTalk',{text:t});input.value=''}send.onclick=sendText;input.addEventListener('keydown',e=>{if(e.key==='Enter')sendText()});mic.onclick=function(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){status.textContent='تشخیص گفتار در این مرورگر پشتیبانی نمی‌شود. متن را بنویس و ارسال کن.';return}if(listening){rec?.stop();return}rec=new SR();rec.lang='fa-IR';rec.interimResults=false;rec.maxAlternatives=1;rec.onstart=()=>{listening=true;mic.textContent='⏹ توقف صحبت';status.textContent='گوش می‌دهم… فارسی صحبت کن.'};rec.onresult=e=>{input.value=e.results[0][0].transcript;status.textContent='شنیدم: '+input.value;sendText()};rec.onerror=e=>{status.textContent=e.error==='not-allowed'?'اجازه میکروفون داده نشد؛ از تنظیمات سایت اجازه بده.':'میکروفون خطا داد. می‌توانی پیام را تایپ کنی.'};rec.onend=()=>{listening=false;mic.textContent='🎙️ شروع صحبت'};try{rec.start()}catch(e){status.textContent='میکروفون در حال استفاده است یا اجازه لازم دارد.'}};const s=socket();if(s&&s.on){s.on('connect',()=>{status.textContent='اتصال برقرار شد؛ می‌توانی صحبت کنی.'});s.on('disconnect',()=>{status.textContent='اتصال قطع شد؛ تلاش برای اتصال دوباره…';send.disabled=false;clearTimeout(replyTimer)});s.on('aiTalkReply',d=>{clearTimeout(replyTimer);send.disabled=false;if(d?.error){status.textContent=d.error;return}const answer=String(d?.text||'پاسخی دریافت نشد.');status.textContent='AI: '+answer;say(answer)});}document.getElementById('aiTalkClose').onclick=()=>box.style.display='none';const open=document.getElementById('morgAIChatOpen');if(open)open.onclick=()=>{box.style.display='block';input.focus()};})();</script></body>
+<style id="morgdoni-ai-chat-style">
+#morgAIchat{position:fixed;z-index:999999;right:16px;bottom:16px;width:min(390px,calc(100vw - 24px));height:min(620px,calc(100dvh - 32px));display:none;flex-direction:column;overflow:hidden;border:1px solid #b9a0ff55;border-radius:24px;background:linear-gradient(160deg,#17122b,#21143b 55%,#101827);color:#f8f7ff;box-shadow:0 22px 75px #0009;font:14px 'Vazirmatn',system-ui,sans-serif}
+#morgAIchat .aich-head{display:flex;align-items:center;gap:10px;padding:14px;background:linear-gradient(120deg,#6d28d9,#4c1d95);border-bottom:1px solid #ffffff22}
+#morgAIchat .aich-avatar{width:42px;height:42px;display:grid;place-items:center;border-radius:14px;background:#ffffff22;font-size:24px}
+#morgAIchat .aich-title{flex:1;font-weight:900;font-size:16px}
+#morgAIchat .aich-sub{font-size:11px;color:#e9d5ff;margin-top:2px}
+#morgAIchat button{border:0;border-radius:12px;padding:10px 13px;font-weight:800;cursor:pointer}
+#morgAIchat #aiChatClose{background:#ffffff20;color:#fff;font-size:18px;padding:6px 10px}
+#morgAIchat #aiChatClear{background:#ffffff12;color:#e9d5ff;font-size:11px;padding:7px 9px}
+#morgAIchat #aiChatMessages{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+#morgAIchat .aich-msg{max-width:88%;padding:11px 13px;border-radius:17px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 4px 12px #0002}
+#morgAIchat .aich-user{align-self:flex-start;background:linear-gradient(135deg,#7c3aed,#5b21b6);border-bottom-right-radius:5px}
+#morgAIchat .aich-bot{align-self:flex-end;background:#ffffff12;border:1px solid #ffffff12;border-bottom-left-radius:5px}
+#morgAIchat .aich-label{display:block;font-size:10px;color:#d8b4fe;margin-bottom:3px;font-weight:800}
+#morgAIchat .aich-welcome{align-self:stretch;text-align:center;color:#d6d3e8;padding:20px 10px;line-height:1.9}
+#morgAIchat .aich-typing{align-self:flex-end;color:#d8b4fe;font-size:12px;padding:5px 10px}
+#morgAIchat .aich-foot{padding:12px;border-top:1px solid #ffffff18;background:#0c1020}
+#morgAIchat .aich-compose{display:flex;gap:8px;align-items:flex-end}
+#morgAIchat #aiChatInput{flex:1;min-height:44px;max-height:120px;resize:vertical;box-sizing:border-box;border:1px solid #7c3aed66;border-radius:15px;background:#17152a;color:#fff;padding:12px;font:14px inherit;line-height:1.6;outline:none}
+#morgAIchat #aiChatInput:focus{border-color:#c4b5fd;box-shadow:0 0 0 3px #8b5cf633}
+#morgAIchat #aiChatSend{background:linear-gradient(135deg,#10b981,#059669);color:#fff;min-width:54px}
+#morgAIchat #aiChatSend:disabled{opacity:.55;cursor:wait}
+#morgAIchat .aich-status{font-size:11px;color:#a5b4fc;min-height:18px;margin-top:7px}
+@media(max-width:600px){#morgAIchat{right:8px;bottom:8px;width:calc(100vw - 16px);height:min(75dvh,650px);border-radius:20px}}
+</style>
+<section id="morgAIchat" aria-label="چت متنی با هوش مصنوعی" dir="rtl">
+ <header class="aich-head"><div class="aich-avatar">🤖</div><div style="flex:1"><div class="aich-title">گفت‌وگو با هوش مصنوعی</div><div class="aich-sub">چت متنی فارسی • پاسخ‌گویی هوشمند</div></div><button id="aiChatClear" type="button">پاک‌کردن</button><button id="aiChatClose" type="button" aria-label="بستن">×</button></header>
+ <div id="aiChatMessages" aria-live="polite"><div class="aich-welcome">سلام! 👋<br>هر چیزی دوست داری بپرس؛ می‌تونیم دربارهٔ مرغ‌دونی یا هر موضوع دیگه‌ای گپ بزنیم.</div></div>
+ <footer class="aich-foot"><div class="aich-compose"><textarea id="aiChatInput" rows="1" maxlength="600" placeholder="پیامت رو اینجا بنویس… (Enter برای ارسال)" aria-label="پیام به هوش مصنوعی"></textarea><button id="aiChatSend" type="button">ارسال</button></div><div id="aiChatStatus" class="aich-status">در حال بررسی اتصال…</div></footer>
+</section>
+<script id="morgdoni-ai-chat-script">
+(function(){
+ const box=document.getElementById('morgAIchat'),messages=document.getElementById('aiChatMessages'),input=document.getElementById('aiChatInput'),send=document.getElementById('aiChatSend'),status=document.getElementById('aiChatStatus');
+ let history=[],replyTimer=null,waiting=false;
+ const socket=()=>window.__MORG_SOCKET__||window.socket;
+ function statusText(t){status.textContent=t}
+ function addBubble(role,text){const el=document.createElement('div');el.className='aich-msg '+(role==='user'?'aich-user':'aich-bot');const label=document.createElement('span');label.className='aich-label';label.textContent=role==='user'?'شما':'🤖 هوش مصنوعی';const body=document.createElement('span');body.textContent=text;el.append(label,body);messages.appendChild(el);messages.scrollTop=messages.scrollHeight;return el}
+ function removeTyping(){document.getElementById('aiChatTyping')?.remove()}
+ function showTyping(){removeTyping();const el=document.createElement('div');el.id='aiChatTyping';el.className='aich-typing';el.textContent='🤖 دارم فکر می‌کنم…';messages.appendChild(el);messages.scrollTop=messages.scrollHeight}
+ function setWaiting(v){waiting=v;send.disabled=v;send.textContent=v?'…':'ارسال'}
+ function sendMessage(){const text=input.value.trim();if(!text||waiting)return;const s=socket();if(!s||s.ws?.readyState!==1){statusText('اتصال برقرار نیست؛ چند لحظه صبر کن و دوباره بفرست.');return}
+ input.value='';addBubble('user',text);const prior=history.slice(-12);history.push({role:'user',content:text});setWaiting(true);showTyping();statusText('پیامت ارسال شد؛ منتظر پاسخ هستم…');clearTimeout(replyTimer);replyTimer=setTimeout(()=>{setWaiting(false);removeTyping();statusText('پاسخ دیر رسید. دوباره تلاش کن؛ پیام قبلی در گفتگو می‌ماند.');},45000);s.emit('aiTalk',{text,history:prior})}
+ send.onclick=sendMessage;input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}});
+ document.getElementById('aiChatClose').onclick=()=>box.style.display='none';
+ document.getElementById('aiChatClear').onclick=()=>{history=[];messages.innerHTML='<div class="aich-welcome">گفتگو پاک شد. از نو شروع کنیم! ✨</div>';statusText('گفتگوی تازه آماده است.')};
+ const open=document.getElementById('morgAIChatOpen');if(open)open.onclick=()=>{box.style.display='flex';input.focus()};
+ const s=socket();if(s&&s.on){s.on('connect',()=>statusText('متصل هستی؛ آمادهٔ گفتگو.'));s.on('disconnect',()=>{setWaiting(false);clearTimeout(replyTimer);removeTyping();statusText('اتصال قطع شد؛ لطفاً دوباره ارسال کن.')});s.on('aiTalkReply',d=>{clearTimeout(replyTimer);setWaiting(false);removeTyping();if(d?.error){statusText(d.error);addBubble('assistant','مشکلی پیش آمد: '+d.error);return}const answer=String(d?.text||'پاسخی دریافت نشد.');history.push({role:'assistant',content:answer});addBubble('assistant',answer);statusText('پاسخ دریافت شد.')})}
+})();
+</script></body>
 </html>
