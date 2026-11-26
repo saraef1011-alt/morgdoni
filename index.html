@@ -1125,7 +1125,6 @@ function forceMorgdoniGameView() {
                 document.getElementById('roomStatus').innerHTML = '✅ متصل به سرور';
                 addLog('✅ به سرور متصل شدی!');
                 socket.emit('loadProfile', { accountId: myAccountId });
-                if (myName) socket.emit('registerPlayer', { playerName: myName, accountId: myAccountId, avatar: myProfile?.avatar || selectedAvatar || '🐔' });
 
                 // ورود خودکار به اتاق هنگام باز کردن لینک اصلی غیرفعال است.
                 // صفحه اصلی باید همیشه با / شروع شود؛ ورود به اتاق فقط با اقدام خود بازیکن انجام می‌شود.
