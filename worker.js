@@ -76,7 +76,7 @@ export class GameRoom {
     if(t==='joinRoom'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r)return this.send(id,'roomError','اتاق پیدا نشد');if(r.gameStarted)return this.send(id,'roomError','این بازی شروع شده است');if(r.players.length>=2)return this.send(id,'roomError','اتاق پر است');const p=online[id]||{id,name:String(d.playerName||'بازیکن'),accountId:id,avatar:'🐔'};online[id]??=p;online[id].status='room';r.players.push(this.player(p));this.roomBroadcast(r,'roomUpdate',r);this.updateList();await this.save();return}
     if(t==='startGame'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r||r.host!==id||r.players.length<2)return;this.startGame(rid);await this.save();return}
     if(t==='getGameState'){const r=this.data.rooms[String(d.roomId||'').toUpperCase()];if(r)this.send(id,'gameState',r);return}
-    if(t==='gameAction'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r||!r.gameStarted||r.winner)return;const p=r.players.find(x=>x.id===id);if(!p||r.currentTurn!==id)return;const o=r.players.find(x=>x.id===d.data?.target&&x.id!==id)||r.players.find(x=>x.id!==id);let done=false,a=d.action;
+    if(t==='gameAction'){const rid=String(d.roomId||'').toUpperCase(),r=this.data.rooms[rid];if(!r||!r.gameStarted||r.winner)return;const p=r.players.find(x=>x.id===id);if(!p||r.currentTurn!==id)return;const o=r.players.find(x=>x.id===d.data?.target&&x.id!==id)||r.players.find(x=>x.id!==id);let done=false,a=d.action;const botFoxShield=a==='fox'&&o?.hand?.filter(x=>x==='خروس').length>=2;const botTargetEggsBefore=o?.eggs||0;
       if(a==='lay'){const ix=['مرغ','خروس','لانه'].map(x=>p.hand.indexOf(x));if(ix.every(x=>x>=0)&&r.eggTokens>0){ix.sort((x,y)=>y-x).forEach(x=>p.hand.splice(x,1));p.eggs++;r.eggTokens--;done=true}}
       if(a==='hatch'&&p.eggs>0&&p.hand.filter(x=>x==='مرغ').length>=2){let n=0;for(let i=0;i<p.hand.length&&n<2;i++)if(p.hand[i]==='مرغ'){p.hand.splice(i,1);i--;n++}p.eggs--;p.chicks++;done=true}
       if(a==='draw'&&r.deck.length){p.hand.push(r.deck.pop());done=true}
@@ -90,8 +90,8 @@ export class GameRoom {
          let notice='';
          if(a==='lay')notice='ربات کارت مرغ، خروس و لانه را بازی کرد و یک تخم گذاشت 🥚';
          else if(a==='hatch')notice='ربات دو کارت مرغ مصرف کرد و یک تخم را به جوجه تبدیل کرد 🐣';
-         else if(a==='fox')notice=o?.hand?.filter(x=>x==='خروس').length>=2?'ربات روباه بازی کرد؛ دو خروس حریف از تخم‌ها دفاع کردند 🦊':'ربات روباه بازی کرد و یک تخم از حریف گرفت 🦊';
-         else if(a==='snake')notice='ربات مار بازی کرد و '+Math.min(Number(d.data?.count)||1,o?.eggs||0)+' تخم حریف را شکست 🐍';
+         else if(a==='fox')notice=botFoxShield?'ربات روباه بازی کرد؛ دو خروس حریف از تخم‌ها دفاع کردند 🦊':'ربات روباه بازی کرد و یک تخم از حریف گرفت 🦊';
+         else if(a==='snake')notice='ربات مار بازی کرد و '+Math.min(Number(d.data?.count)||1,botTargetEggsBefore)+' تخم حریف را شکست 🐍';
          else if(a==='trap')notice='ربات تله گذاشت و کارت «'+String(d.data?.card||'')+'» حریف را حذف کرد 🎯';
          else if(a==='draw')notice='ربات یک کارت از دسته کشید 🎴';
          else if(a==='discard')notice='ربات کارت «'+String(d.data?.card||'')+'» را دور انداخت 🗑️';
