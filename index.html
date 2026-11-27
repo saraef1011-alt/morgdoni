@@ -434,7 +434,7 @@ body.morgdoni-in-game #gamePanel{display:block!important;visibility:visible!impo
     <button id="liveOnlineOpen" type="button" style="display:none;">👥 آنلاین</button>
 
     <div id="gamePanel" class="board-panel" style="display:none;">
-      <div class="board-head">
+      <div class="board-head">\n        <button id="morgdoniGuideOpen" type="button" class="morgdoni-guide-btn">📘 راهنمای بازی</button>
         <div class="room-chip">🏠 اتاق <b id="roomCodeTop">---</b></div>
         <div class="turn-box" id="turnText">🎯 در انتظار شروع...</div>
         <div class="room-chip">🃏 <b id="deckCountVisual">—</b></div>
@@ -2577,6 +2577,68 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  document.getElementById('aiChatClear').onclick=()=>{history=[];messages.innerHTML='<div class="aich-welcome">گفتگو پاک شد. از نو شروع کنیم! ✨</div>';statusText('گفتگوی تازه آماده است.')};
  const open=document.getElementById('morgAIChatOpen');if(open)open.onclick=()=>{box.style.display='flex';input.focus()};
  const s=socket();if(s&&s.on){s.on('connect',()=>statusText('متصل هستی؛ آمادهٔ گفتگو.'));s.on('disconnect',()=>{setWaiting(false);clearTimeout(replyTimer);removeTyping();statusText('اتصال قطع شد؛ لطفاً دوباره ارسال کن.')});s.on('aiTalkReply',d=>{clearTimeout(replyTimer);setWaiting(false);removeTyping();if(d?.error){statusText(d.error);addBubble('assistant','مشکلی پیش آمد: '+d.error);return}const answer=String(d?.text||'پاسخی دریافت نشد.');history.push({role:'assistant',content:answer});addBubble('assistant',answer);statusText('پاسخ دریافت شد.')})}
+})();
+</script><style id="morgdoni-guide-bot-toast-style">
+.morgdoni-guide-btn{border:1px solid #d9b66b;background:linear-gradient(135deg,#fff4cf,#f4d98f);color:#65420b;border-radius:12px;padding:8px 12px;font-weight:900;cursor:pointer;box-shadow:0 3px 0 #b38a37}
+#morgdoniGuideOverlay{position:fixed;inset:0;z-index:1000001;display:none;align-items:center;justify-content:center;background:#090617c9;padding:12px;backdrop-filter:blur(5px)}
+#morgdoniGuideOverlay .mg-guide-card{width:min(760px,100%);max-height:min(88dvh,900px);overflow:auto;background:#fffaf0;color:#342617;border:2px solid #d7b56a;border-radius:22px;box-shadow:0 25px 90px #0009;padding:clamp(16px,3vw,28px);line-height:1.9}
+#morgdoniGuideOverlay .mg-guide-head{position:sticky;top:-1px;background:#fffaf0;padding:4px 0 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #ead8ad;z-index:1}
+#morgdoniGuideOverlay .mg-guide-head h2{font-size:clamp(18px,3vw,25px);margin:0;flex:1}
+#morgdoniGuideOverlay .mg-guide-close{border:0;background:#7c2d12;color:#fff;border-radius:10px;padding:8px 12px;font-weight:900;cursor:pointer}
+#morgdoniGuideOverlay h3{margin:20px 0 6px;color:#7c3d13;font-size:18px}
+#morgdoniGuideOverlay p{margin:7px 0}
+#morgdoniGuideOverlay ul,#morgdoniGuideOverlay ol{padding-right:23px;margin:8px 0}
+#morgdoniGuideOverlay .mg-guide-note{background:#fff0c2;border-right:4px solid #d49a25;padding:10px 13px;border-radius:10px;margin:12px 0}
+#morgdoniGuideOverlay table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+#morgdoniGuideOverlay th,#morgdoniGuideOverlay td{border:1px solid #e2c98e;padding:8px;text-align:right;vertical-align:top}
+#morgdoniGuideOverlay th{background:#f5e4b7}
+#morgdoniGuideOverlay .mg-guide-foot{color:#6b5b43;font-size:12px;margin-top:18px}
+.morgdoni-bot-move-toast{position:fixed;z-index:1000002;top:86px;left:50%;transform:translateX(-50%);width:min(520px,calc(100vw - 24px));box-sizing:border-box;background:linear-gradient(120deg,#21133b,#4c1d95);color:#fff;border:1px solid #c4b5fd;border-radius:16px;padding:13px 16px;text-align:center;font:700 14px/1.7 system-ui,sans-serif;box-shadow:0 12px 40px #0007;animation:mgBotToastIn .18s ease-out}
+.morgdoni-bot-move-toast small{display:block;color:#ddd6fe;font-size:10px;font-weight:600;margin-top:2px}
+@keyframes mgBotToastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(max-width:600px){.morgdoni-guide-btn{padding:6px 8px;font-size:12px}#morgdoniGuideOverlay{padding:7px}#morgdoniGuideOverlay .mg-guide-card{border-radius:16px}.morgdoni-bot-move-toast{top:74px;font-size:13px}}
+/* AI chat sits under the top bar on the left, leaving turn controls and cards clear. */
+#morgAIchat{top:76px!important;left:14px!important;right:auto!important;bottom:auto!important;height:min(560px,calc(100dvh - 92px))!important}
+@media(max-width:600px){#morgAIchat{top:70px!important;left:8px!important;right:8px!important;bottom:auto!important;width:auto!important;height:min(58dvh,540px)!important}}
+</style>
+<div id="morgdoniGuideOverlay" role="dialog" aria-modal="true" aria-labelledby="morgdoniGuideTitle" dir="rtl">
+ <article class="mg-guide-card">
+  <header class="mg-guide-head"><h2 id="morgdoniGuideTitle">📘 راهنمای کامل مرغ‌دونی</h2><button type="button" class="mg-guide-close" id="morgdoniGuideClose">بستن ✕</button></header>
+  <p>هدف بازی این است که زودتر از حریف به <b>۳ جوجه</b> برسی. برای این کار تخم بگذار، از تخم‌ها محافظت کن و در زمان مناسب تخم‌ها را به جوجه تبدیل کن.</p>
+  <div class="mg-guide-note"><b>یادآوری:</b> این راهنما با قوانین پیاده‌سازی‌شده در نسخهٔ آنلاین مرغ‌دونی هماهنگ است؛ ممکن است بعضی جزئیات با نسخهٔ چاپی بازی فرق داشته باشد.</div>
+  <h3>۱) شروع بازی و هدف</h3>
+  <ul><li>هر بازیکن با <b>۴ کارت</b> در دست شروع می‌کند.</li><li>در بازی <b>۱۸ توکن تخم</b> وجود دارد؛ تخم‌گذاری توکن را از ذخیره کم می‌کند و شکستن تخم آن را به ذخیره برمی‌گرداند.</li><li>هر بازیکن تخم‌ها و جوجه‌های خودش را جمع می‌کند. اولین بازیکنی که به <b>۳ جوجه</b> برسد، برنده است.</li><li>در هر نوبت، بازیکنِ نوبت‌دار می‌تواند یک حرکت قانونی انجام دهد؛ پس از حرکت، کارت‌های دستش تا حد امکان دوباره به ۴ کارت می‌رسد.</li></ul>
+  <h3>۲) کارت‌ها و کاربردشان</h3>
+  <table><thead><tr><th>کارت</th><th>تعداد در دسته</th><th>کاربرد</th></tr></thead><tbody>
+  <tr><td>🐔 مرغ</td><td>۲۱</td><td>برای تخم‌گذاری یک مرغ لازم است؛ برای تبدیل تخم به جوجه، دو مرغ مصرف می‌شود.</td></tr>
+  <tr><td>🐓 خروس</td><td>۲۱</td><td>برای تخم‌گذاری یک خروس لازم است. داشتن دو خروس در دست، در برابر اثر روباه از تخم‌ها دفاع می‌کند.</td></tr>
+  <tr><td>🪹 لانه</td><td>۱۲</td><td>همراه مرغ و خروس، یک تخم می‌گذارد.</td></tr>
+  <tr><td>🦊 روباه</td><td>۷</td><td>اگر حریف تخم داشته باشد، یک تخم می‌گیرد؛ اگر حریف دو خروس در دست داشته باشد، آن دو خروس را مصرف می‌کند و تخم را نمی‌گیرد.</td></tr>
+  <tr><td>🎯 تله</td><td>۳</td><td>یک کارت انتخاب‌شده از دست حریف را حذف می‌کند.</td></tr>
+  <tr><td>🐍 مار</td><td>۲</td><td>۱ یا ۲ تخم حریف را می‌شکند؛ تخم‌های شکسته به ذخیره برمی‌گردند.</td></tr>
+  </tbody></table>
+  <h3>۳) حرکت‌های اصلی</h3>
+  <ol><li><b>تخم‌گذاری:</b> کارت مرغ + خروس + لانه را با هم مصرف کن. اگر توکن تخم در ذخیره باشد، یک تخم به دارایی‌ات اضافه می‌شود.</li><li><b>جوجه کردن:</b> وقتی حداقل یک تخم داری و دو کارت مرغ در دستت هست، آن دو مرغ و یک تخم را مصرف کن تا یک جوجه بگیری.</li><li><b>روباه:</b> حریفِ دارای تخم را هدف بگیر. اگر دو خروس در دست داشته باشد، خروس‌ها دفاع می‌کنند؛ در غیر این صورت یک تخم به تو منتقل می‌شود.</li><li><b>مار:</b> حریفِ دارای تخم را انتخاب کن و تعداد ۱ یا ۲ را مشخص کن. به اندازهٔ تخم‌های موجود، تخم‌هایش شکسته می‌شود.</li><li><b>تله:</b> حریف و کارت موردنظرش را انتخاب کن؛ کارت تله و کارت انتخابی حریف هر دو از دست خارج می‌شوند.</li><li><b>کشیدن کارت:</b> یک کارت از دسته بردار؛ اگر دستت کمتر از ۴ کارت باشد، بعد از حرکت کارت‌ها تکمیل می‌شوند.</li><li><b>باطل کردن:</b> یک کارت از دستت را دور بینداز تا پس از حرکت کارت جدید بگیری.</li><li><b>پایان نوبت:</b> اگر حرکت دیگری نمی‌خواهی یا نمی‌توانی انجام دهی، نوبت را تمام کن.</li></ol>
+  <h3>۴) ترتیب یک نوبت پیشنهادی</h3>
+  <ol><li>بالای صفحه بررسی کن نوبت چه کسی است.</li><li>دستت را نگاه کن و کارت‌های لازم برای تخم‌گذاری یا جوجه‌کردن را بشمار.</li><li>اگر حریف تخم دارد، ببین روباه یا مار برایت سودمند است یا نه.</li><li>یک حرکت انجام بده؛ کارت‌های مصرف‌شده از دستت کم می‌شوند.</li><li>کارت‌های دستت تا ۴ عدد تکمیل می‌شود، تا وقتی کارت در دسته موجود باشد.</li><li>اگر دسته تمام شده و کارت دورریخته‌شده وجود داشته باشد، کارت‌های دورریخته‌شده دوباره بر زده و دستهٔ تازه می‌شوند.</li></ol>
+  <h3>۵) نکته‌های تاکتیکی</h3>
+  <ul><li>به محض داشتن مرغ، خروس و لانه، معمولاً تخم‌گذاری راه خوبی برای ساختن منابع است.</li><li>وقتی تخم داری و دو مرغ دستت است، جوجه‌کردن تو را به شرط برد نزدیک می‌کند.</li><li>اگر حریف به ۲ جوجه نزدیک شد، اولویت را به متوقف‌کردن او بده؛ روباه و مار فقط وقتی تخم دارد اثر دارند.</li><li>دو خروس در دست می‌توانند جلوی روباه را بگیرند؛ اما اگر روباه بازی شود، این دفاع در نسخهٔ فعلی با مصرف دو خروس انجام می‌شود.</li><li>تله زمانی ارزشمند است که کارت مهمی از حریف را حذف کنی؛ کارت انتخابی حریف را با دقت انتخاب کن.</li><li>کارت‌های مار و روباه را برای زمانی نگه دار که حریف تخم دارد؛ در غیر این صورت حرکتشان قابل اجرا نیست.</li></ul>
+  <h3>۶) ربات حریف</h3>
+  <p>ربات با توجه به کارت‌های دست، تخم‌ها، جوجه‌ها و حرکت‌های قانونی تصمیم می‌گیرد. هر بار که حرکتش اجرا شود، پیام توضیح حرکتش روی صفحه نمایش داده می‌شود و پس از ۳ ثانیه خودکار ناپدید می‌شود.</p>
+  <p class="mg-guide-foot">اگر دکمه‌ای در نوبت تو فعال نیست، احتمالاً کارت‌های لازم یا هدف مناسب برای آن حرکت را نداری.</p>
+ </article>
+</div>
+<script id="morgdoni-guide-bot-toast-script">
+(function(){
+ const guide=document.getElementById('morgdoniGuideOverlay'),open=document.getElementById('morgdoniGuideOpen'),close=document.getElementById('morgdoniGuideClose');
+ if(open)open.onclick=()=>{guide.style.display='flex';document.body.style.overflow='hidden'};
+ function closeGuide(){guide.style.display='none';document.body.style.overflow=''}
+ if(close)close.onclick=closeGuide;
+ if(guide)guide.addEventListener('click',e=>{if(e.target===guide)closeGuide()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeGuide()});
+ let toast=null,timer=null;
+ function showBotMove(data){if(!data||!data.text)return;if(!toast){toast=document.createElement('div');toast.className='morgdoni-bot-move-toast';toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');document.body.appendChild(toast)}clearTimeout(timer);toast.innerHTML='🤖 <b>حرکت ربات</b><div>'+String(data.text).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</div><small>این پیام ۳ ثانیه نمایش داده می‌شود</small>';toast.style.display='block';timer=setTimeout(()=>{if(toast)toast.style.display='none'},3000)}
+ const s=window.__MORG_SOCKET__||window.socket;if(s&&s.on)s.on('botMoveNotice',showBotMove);
 })();
 </script></body>
 </html>
